@@ -130,3 +130,5 @@ dmypy.json
 
 # Project specific
 /ASP
+data_raw/*
+data_processed/*

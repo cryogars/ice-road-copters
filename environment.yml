@@ -1,0 +1,34 @@
+name: heli
+channels: 
+  - conda-forge
+dependencies:
+  - python=3.8
+  - numpy
+  - pandas
+  - matplotlib
+  - geopandas
+  - descartes
+  - shapely
+  - contextily
+  - gdal
+  - pdal
+  - scipy
+  - haversine
+  - utm
+  - bokeh
+  - panel
+  - holoviews
+  - geoviews
+  - seaborn
+  - opencv
+  - rasterstats
+  - hvplot
+  - rasterio
+  - scikit-image
+  - xarray
+  - datashader
+  - s3fs
+  - laspy
+  - pip
+  - pip:
+    - open3d

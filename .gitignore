@@ -132,3 +132,5 @@ dmypy.json
 /ASP
 data_raw/*
 data_processed/*
+!data_raw/.gitkeep
+!data_processed/.gitkeep

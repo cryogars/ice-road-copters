@@ -11,7 +11,7 @@ dependencies:
   - shapely
   - contextily
   - gdal
-  - pdal
+  - python-pdal
   - scipy
   - haversine
   - utm
@@ -20,13 +20,10 @@ dependencies:
   - holoviews
   - geoviews
   - seaborn
-  - opencv
   - rasterstats
   - hvplot
   - rasterio
-  - scikit-image
   - xarray
-  - datashader
   - s3fs
   - laspy
   - pip

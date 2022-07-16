@@ -6,8 +6,12 @@ channels:
   - defaults
 dependencies:
   - ale=0.8.5=py36hc61eee1_3
+  - appnope=0.1.3=pyhd8ed1ab_0
   - armadillo=9.200.4=hcb88e47_1205
   - arpack=3.6.3=h06d5271_1005
+  - backcall=0.2.0=pyh9f0ad1d_0
+  - backports=1.0=py36_1
+  - backports.functools_lru_cache=1.6.4=pyhd8ed1ab_0
   - blas=1.1=openblas
   - boost=1.68.0=py36h9888f84_1001
   - boost-cpp=1.68.0=h6f8c590_1000
@@ -24,6 +28,7 @@ dependencies:
   - decorator=4.4.2=py_0
   - eigen=3.4.0=h940c156_0
   - embree=2.16.0=h6834224_0
+  - entrypoints=0.4=pyhd8ed1ab_0
   - expat=2.4.8=h96cf925_0
   - ffmpeg=3.4.1=0
   - fftw=3.3.8=nompi_h5c49c53_1109
@@ -48,10 +53,16 @@ dependencies:
   - icu=58.2=h0a44026_1000
   - ilmbase=2.5.5=hfab91a5_0
   - inja=3.3.0=he49afe7_0
+  - ipykernel=5.5.5=py36h495a4c6_0
+  - ipython=7.16.1=py36h9cf137f_2
+  - ipython_genutils=0.2.0=py36_0
   - isis=6.0.0=0
   - jama=125=0
   - jasper=1.900.1=h636a363_1006
+  - jedi=0.17.2=py36h79c6626_1
   - jpeg=9e=hac89ed1_2
+  - jupyter_client=7.1.2=pyhd8ed1ab_0
+  - jupyter_core=4.8.1=py36h79c6626_0
   - kakadu=1=0
   - krb5=1.16.3=h24a3359_1000
   - laszip=2.1.0=h0a44026_1
@@ -74,6 +85,7 @@ dependencies:
   - libpointmatcher=isis6=ha5a8b8e_0
   - libpq=10.6=hbe1e24e_1000
   - libprotobuf=3.9.2=hfbae3c0_0
+  - libsodium=1.0.18=hbcb3906_1
   - libssh2=1.8.0=hf30b1f0_1003
   - libtiff=4.0.10=ha78913b_1005
   - libwebp=0.5.2=7
@@ -89,6 +101,7 @@ dependencies:
   - mysql-connector-c=6.1.11=had4e77e_1002
   - nanoflann=1.4.2=h694c41f_0
   - ncurses=6.3=h96cf925_1
+  - nest-asyncio=1.5.5=pyhd8ed1ab_0
   - networkx=2.5.1=pyhd8ed1ab_0
   - nlohmann_json=3.10.5=hb486fe8_1
   - nn=1.86.0=h1de35cc_2003
@@ -99,22 +112,29 @@ dependencies:
   - openjpeg=2.3.0=h3bf0609_1003
   - openssl=1.0.2u=h0b31af3_0
   - parallel=20220522=h694c41f_0
+  - parso=0.7.1=pyh9f0ad1d_0
   - pbzip2=1.1.13=h9d27c22_1
   - pcl=1.9.1=hdd77166_1002
   - pcre=8.45=he49afe7_0
   - perl=5.32.1=2_h0d85af4_perl5
+  - pexpect=4.8.0=py36h9f0ad1d_1
+  - pickleshare=0.7.5=py36h9f0ad1d_1002
   - pip=21.2.4=pyhd8ed1ab_0
   - pixman=0.34.0=h1de35cc_1003
   - postgresql=10.6=ha1bbaa7_1000
   - proj4=5.2.0=h6de7cb9_1006
+  - prompt-toolkit=3.0.30=pyha770c72_0
   - protobuf=3.9.2=py36h6de7cb9_1
   - pthread-stubs=0.4=hc929b4f_1001
+  - ptyprocess=0.7.0=pyhd3deb0d_0
   - pvl=1.3.1=pyhd8ed1ab_0
+  - pygments=2.12.0=pyhd8ed1ab_0
   - python=3.6.7=h4a56312_1002
   - python-dateutil=2.8.2=pyhd8ed1ab_0
   - python_abi=3.6=2_cp36m
   - pytz=2022.1=pyhd8ed1ab_0
   - pyyaml=5.4.1=py36hfa26744_1
+  - pyzmq=22.3.0=py36h50cd92c_0
   - qhull=7.2.0=0
   - qt=5.9.6=7
   - qwt=6.1.3=0
@@ -132,9 +152,12 @@ dependencies:
   - theia=isis6=h01edc0c_1001
   - tk=8.6.12=h5dbffcc_0
   - tnt=126=0
+  - tornado=6.1=py36hfa26744_1
+  - traitlets=4.3.3=py36h9f0ad1d_1
   - tzcode=2022a=h5eb16cf_0
   - usgscsm=1.6.0_asp3.1.0=ha5a8b8e_0
   - visionworkbench=3.1.0=0
+  - wcwidth=0.2.5=pyh9f0ad1d_2
   - wheel=0.37.1=pyhd8ed1ab_0
   - x264=20131218=0
   - xerces-c=3.1.4=h10f7eb2_0
@@ -162,6 +185,7 @@ dependencies:
   - xorg-xproto=7.0.31=h35c211d_1007
   - xz=5.2.5=haf1e3a3_1
   - yaml=0.2.5=h0d85af4_2
+  - zeromq=4.3.4=he49afe7_1
   - zlib=1.2.11=h6c3fc93_1014
   - zstd=1.4.9=h582d3a0_0
 prefix: /Users/zachkeskinen/miniconda3/envs/asp

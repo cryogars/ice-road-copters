@@ -11,9 +11,12 @@ $ conda activate heli
 ```
 
 
-###  2. Download ASP 3.1.0 , extract, and save to directory as "ASP" (.gitignore bc big)
-
-https://github.com/NeoGeographyToolkit/StereoPipeline/releases
+###  2. Set up asp conda environment
+```
+$ conda env create -f asp_env.yml
+$ conda activate asp
+$ which stereo
+```
 
 
 

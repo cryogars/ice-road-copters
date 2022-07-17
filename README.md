@@ -1,17 +1,16 @@
-# quick steps for us to get started...
+# ice-road-copters
+The goal of this program is to utilize existing USGS 3DEP high resolution topography data and Ames Stereo Pipeline (ASP) software to align snow-on airborne lidar points clouds to real world coordinates without the use of ground control points.
+![heli_bsu](./docs/heli.svg)
 
-### 0. Get the raw lidar data
-Heli data: `SNOWDATA/Nah/2022_IDALS`
-
-
-###  1. Set up a conda environment
+###  Set up conda environments
+#### Lidar processing env
 ```
 $ conda env create -f environment.yml
 $ conda activate heli
 ```
 
 
-###  2. Set up asp conda environment
+#### ASP env
 ```
 $ conda env create -f asp_env.yml
 $ conda activate asp
@@ -20,9 +19,3 @@ $ which stereo
 
 
 
-### 3. let's do it! 
-
-Dom's code: https://github.com/granitehills14/Airborne-Laser-Scanning
-
-
-ASP example wrappers: https://github.com/friedrichknuth/hsfm/blob/master/hsfm/asp/asp.py

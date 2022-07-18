@@ -136,11 +136,12 @@ dmypy.json
 *__pycache__
 
 # Project specific
-/ASP
 data_raw/*
 data_processed/*
 !data_raw/.gitkeep
 !data_processed/.gitkeep
+usgs_1m_tiles/*
+!usgs_1m_tiles/.gitkeep
 test/
 *.tif
 *.ttff

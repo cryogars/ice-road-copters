@@ -1,11 +1,11 @@
 [
     {
         "type":"readers.las",
-        "filename":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/09_EXPORT/*.laz"
+        "filename":"input.laz"
      },
     {
         "type":"filters.dem",
-        "raster":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/dems/full.tif",
+        "raster":"/Users/zachkeskinen/Documents/ice-road-copters/test/dems/full.tif",
         "limits":"Z[20:35]"
     },
     {
@@ -19,7 +19,8 @@
       "limits":"classification![7:7]"
     },
     {
-        "type":"filters.smrf"
+        "type":"filters.smrf",
+        "ignore":"NumberOfReturns[0:0], ReturnNumber[0:0]"
     },
     {
         "type":"filters.range",
@@ -27,11 +28,11 @@
     },
     {
         "type":"writers.las",
-        "filename":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/09_EXPORT/filter_class_full.laz"
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.laz"
      },
     {
         "type":"writers.gdal",
-        "filename":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/09_EXPORT/filter_class_full.tif",
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.tif",
         "resolution":1.0,
         "output_type":"idw"
     }

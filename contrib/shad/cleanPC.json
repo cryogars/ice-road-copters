@@ -1,0 +1,25 @@
+{
+    "pipeline": [
+        {
+        "type":"readers.las"
+     },
+     {
+         "type":"filters.dem",
+         "raster":"MC_1m_WGS84UTM11_WGS84.tif",
+         "limits":"Z[10:55]"
+     },
+     {
+         "type":"filters.outlier",
+         "method":"statistical",
+         "mean_k":12,
+         "multiplier":2.2
+     },
+     {
+       "type":"filters.range",
+       "limits":"classification![7:7]"
+     },
+     {
+        "type":"writers.las"
+     }
+]
+}

@@ -1,0 +1,29 @@
+{
+    "pipeline": [
+        {
+           "type":"readers.las"
+        },
+        {
+          "type": "filters.mongo",
+          "expression": { "$and": [
+              { "ReturnNumber": "NumberOfReturns" },
+              { "NumberOfReturns": { "$gt": 1 } }
+          ] }
+        },
+        {
+            "type":"filters.smrf"
+        },
+        {
+            "type":"filters.range",
+            "limits":"Classification[2:2]"
+        },
+        {
+           "type":"writers.las"
+        },
+        {
+            "type":"writers.gdal",
+            "output_type":"idw",
+            "resolution":1.0
+        }
+    ]
+}

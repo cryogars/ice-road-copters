@@ -1,0 +1,12 @@
+{
+    "pipeline": [
+        {
+           "type":"readers.las",
+           "override_srs":"EPSG:32611"
+        },
+        {
+           "type":"writers.las",
+           "compression": "true"
+        }
+      ]
+  }

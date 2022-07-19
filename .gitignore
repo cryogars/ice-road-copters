@@ -135,6 +135,9 @@ dmypy.json
 *.vscode
 *__pycache__
 
+# py3dep
+*cache
+
 # Project specific
 ASP/
 data_raw/*

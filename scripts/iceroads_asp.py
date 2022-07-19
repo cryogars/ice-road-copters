@@ -83,28 +83,12 @@ def iceroads_asp(clean_PC, transform_area, geoid=False, buffer_meters=5):
 
     # Load in all of the tiles and prep for ASP....
     print('[INFO] USGS TIF files being loaded and merged...')
-    # List all files in (to be variable)
-    search = glob.glob(os.path.join('./usgs_1m_tiles/MCS/*.tif'))
 
-    # Make a list of files
-    src_files_to_mosaic = []
-    for fp in search:
-        src = rasterio.open(fp)
-        src_files_to_mosaic.append(src)
-
-    # Merge list of tif files
-    mosaic, out_trans = merge(src_files_to_mosaic)
-
-    # Copy metadata to mosaic
-    out_meta = src.meta.copy()
-
-    # Output mosaic tif.. this will next be used as reference in pc_align
-    with rasterio.open('./out.tif', "w", **out_meta) as dest:
-        dest.write(mosaic)
+    # TODO: COPY AND PASTE TEST HERE
 
     # Use ASP to convert from geoid to ellipsoid
     if not geoid:
-        dem_geoid('mosaic.tif --geoid NAVD88 --reverse-adjustment -o dem_ellipsoid')
+        #dem_geoid('mosaic.tif --geoid NAVD88 --reverse-adjustment -o dem_ellipsoid')
         print('[INFO] Merged DEM converted to ellipsoid per user input')
     else:
         print('[INFO] Merged DEM was kept as geoid per user input')
@@ -112,6 +96,7 @@ def iceroads_asp(clean_PC, transform_area, geoid=False, buffer_meters=5):
 
     # Call ASP pc_align function on road and DEM
     print('[INFO] Beginning pc_align function...')
+    #pc_align()
     
     
     # Apply transformation matrix to laz file..Calculate RMSE based on changes...

@@ -4,6 +4,9 @@ from rasterio.plot import show
 import glob
 import os
 
+# Note to self... still testing... having trouble downloading 1m dems from USGS
+# still need to work out projection issue and finalize dem_geoid
+
 # List all files in (to be variable)
 search = glob.glob(os.path.join('./usgs_1m_tiles/MCS/*.tif'))
 
@@ -24,5 +27,5 @@ with rasterio.open('./out.tif', "w", **out_meta) as dest:
     dest.write(mosaic)
 
 # Use ASP to convert from geoid to ellipsoid
-dem_geoid('mosaic.tif --geoid NAVD88 --reverse-adjustment -o dem_ellipsoid')
+os.system('./ASP/bin/dem_geoid out.tif --geoid NAVD88 --reverse-adjustment -o dem_ellipsoid.tif')
 

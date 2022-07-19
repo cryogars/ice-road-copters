@@ -1,0 +1,15 @@
+name: iceroad
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.6
+  - python-pdal
+  - pip
+  - pip:
+    - whitebox
+    - matplotlib
+    - geopandas
+    - rasterio
+    - xarray
+    - pandas

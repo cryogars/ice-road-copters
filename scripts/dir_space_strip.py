@@ -1,7 +1,7 @@
 import os
 parent_dir = '../test/'
 
-def replace(parent, replace = '_'):
+def replace(parent, replace = ''):
     print(f'Warning! About to replace all whitespaces with "{replace}"s in {os.path.abspath(parent)}')
     print('Press y to continue...')
     ans = input()

@@ -1,7 +1,7 @@
 [
     {
         "type":"readers.las",
-        "filename":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/09_EXPORT/20220215_DryCreek_-_220215_173805_VQ-580.laz"
+        "filename":"/Users/zachkeskinen/Documents/helicopter-lidar-processing/test/09_EXPORT/*.laz"
      },
     {
         "type":"filters.dem",

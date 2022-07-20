@@ -3,6 +3,13 @@
         "type":"readers.las",
         "filename":"input.laz"
      },
+     {
+        "type": "filters.mongo",
+        "expression": { "$and": [
+            { "ReturnNumber": { "$gt": 0 } },
+            { "NumberOfReturns": { "$gt": 0 } }
+        ] }
+    },
     {
         "type":"filters.dem",
         "raster":"/Users/zachkeskinen/Documents/ice-road-copters/test/dems/full.tif",

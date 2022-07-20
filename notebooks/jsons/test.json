@@ -12,7 +12,7 @@
     },
     {
         "type":"filters.dem",
-        "raster":"/Users/zachkeskinen/Documents/ice-road-copters/test/dems/full.tif",
+        "raster":"/Users/zachkeskinen/Documents/ice-road-copters/test/dems/quantum_utm.tif",
         "limits":"Z[20:35]"
     },
     {
@@ -35,11 +35,11 @@
     },
     {
         "type":"writers.las",
-        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.laz"
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_outv2.laz"
      },
     {
         "type":"writers.gdal",
-        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.tif",
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_outv2.tif",
         "resolution":1.0,
         "output_type":"idw"
     }

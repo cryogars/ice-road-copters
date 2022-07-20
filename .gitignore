@@ -149,3 +149,6 @@ usgs_1m_tiles/*
 test/
 *.tif
 *.ttff
+
+# password protection
+notebooks/quantum_ftp_download.ipynb

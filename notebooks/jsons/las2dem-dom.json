@@ -1,0 +1,38 @@
+[
+    {
+        "type":"readers.las",
+        "filename":"input.laz"
+     },
+     {
+        "type": "filters.mongo",
+        "expression": { "$and": [
+            { "ReturnNumber": { "$gt": 0 } },
+            { "NumberOfReturns": { "$gt": 0 } }
+        ] }
+    },
+    {
+       "type": "filters.elm"
+    },
+    {
+        "type":"filters.outlier",
+        "method":"statistical",
+        "mean_k":12,
+        "multiplier":2.2
+    },
+    {
+        "type":"filters.smrf",
+        "ignore":"Classification[7:7], NumberOfReturns[0:0], ReturnNumber[0:0]"
+    },
+    {
+        "type":"writers.las",
+        "where":"Classification[2:2]",
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.laz"
+     },
+    {
+        "type":"writers.gdal",
+        "where":"Classification[2:2]",
+        "filename":"/Users/zachkeskinen/Documents/ice-road-copters/test/09_EXPORT/merged_out.tif",
+        "resolution":1.0,
+        "output_type":"idw"
+    }
+]

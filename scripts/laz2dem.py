@@ -273,7 +273,7 @@ if __name__ == '__main__':
     os.makedirs(log_dir, exist_ok= True)
     logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format=f"(ice-road-copters {__name__} %(levelname)s) %(message)s",
     handlers=[
         logging.FileHandler(join(log_dir, 'las2uncorrectedDEM.log')),
         logging.StreamHandler(sys.stdout)]

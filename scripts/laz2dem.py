@@ -228,14 +228,16 @@ def las2dem(args, debug):
     log.info("Starting to mosaic las files...")
     las_fps = glob(join(in_dir, '*.laz'))
     log.debug(f"Number of las files: {len(las_fps)}")
-    mosaic_fp = mosaic_laz(in_dir)
+    mosaic_fp = join(in_dir, 'merge.laz')
+    if not exists(mosaic_fp):
+        mosaic_fp = mosaic_laz(in_dir)
 
     log.info("Starting DEM download...")
     dem_fp, crs, project = download_dem(mosaic_fp)
     log.debug(f"Downloaded dem to {dem_fp}")
 
     log.info("Creating JSON Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = join(results_dir, basename(in_dir).laz), outtif = outtif, dem_fp = dem_fp)
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = join(results_dir, f'{basename(in_dir)}.laz'), outtif = outtif, dem_fp = dem_fp)
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running PDAL pipeline")

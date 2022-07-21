@@ -6,16 +6,16 @@ import glob
 from datetime import datetime
 import geopandas as gpd
 import whitebox
-import rasterio
-from rasterio.merge import merge
-from rasterio.plot import show
+from osgeo import gdal
 
 # This is the main
-def iceroads_asp(clean_PC, transform_area, geoid=False, buffer_meters=5):
+def iceroads_asp(clean_PC, lidar_EPSG, transform_area, geoid=False, buffer_meters=5):
     '''
     ***********INPUTS***********
 
     `clean_PC` = name of lidar file with cleaned, ground classified point cloud (.laz). Should be saved in data_processed
+
+    `lidar_EPSG` = EPSG for your lidar data .. TODO: Need to find a way to extract this in PDAL
 
     `transform_area` = folder name containing small subset area used to align `clean_PC` with the USGS 3DEP 1m DEM (.shp)
 
@@ -84,19 +84,31 @@ def iceroads_asp(clean_PC, transform_area, geoid=False, buffer_meters=5):
     # Load in all of the tiles and prep for ASP....
     print('[INFO] USGS TIF files being loaded and merged...')
 
-    # TODO: COPY AND PASTE TEST HERE
+    # List tiles to merge
+    tiles = " ".join(glob.glob('./usgs_1m_tiles/'+transform_area+'/*.tif'))
 
-    # Use ASP to convert from geoid to ellipsoid
+    # Merge all tiles
+    os.system('gdal_merge.py -a_nodata -9999 -o '+dirname+'/USGS_merged.tif -of gtiff ' + tiles)
+
     if not geoid:
-        #dem_geoid('mosaic.tif --geoid NAVD88 --reverse-adjustment -o dem_ellipsoid')
+        # Use ASP to convert from geoid to ellipsoid
+        os.system('./ASP/bin/dem_geoid --nodata_value -9999 '+dirname+'/USGS_merged.tif \
+                   --geoid NAVD88 --reverse-adjustment -o '+dirname+'/dem_wgs84')
+        
         print('[INFO] Merged DEM converted to ellipsoid per user input')
+
+        # Convert to same ref as the lidar (EPSG)
+        os.system('./ASP/bin/gdalwarp -t_srs EPSG:32611 '+dirname+'/dem_wgs84-adj.tif '+dirname+'/ref_PC.tif')
+    
     else:
+        # Convert to same ref as the lidar (EPSG)
+        os.system('./ASP/bin/gdalwarp -t_srs EPSG:32611 '+dirname+'/USGS_merged.tif '+dirname+'/ref_PC.tif')
         print('[INFO] Merged DEM was kept as geoid per user input')
 
-
+   
     # Call ASP pc_align function on road and DEM
     print('[INFO] Beginning pc_align function...')
-    #pc_align()
+    #os.system('./ASP/bin/pc_align parallel?? ')
     
     
     # Apply transformation matrix to laz file..Calculate RMSE based on changes...
@@ -105,5 +117,8 @@ def iceroads_asp(clean_PC, transform_area, geoid=False, buffer_meters=5):
 
     # Export laz as aligned_PC
 
+
+
 # Used for testing
-iceroads_asp(clean_pc='clean_PC.laz', transform_area='hwy_21', geoid=False, buffer_meters=5)
+iceroads_asp(clean_PC = 'clean_PC.laz', lidar_EPSG = 'EPSG:32611', 
+             transform_area='hwy_21', geoid=False, buffer_meters=5)

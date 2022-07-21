@@ -197,9 +197,19 @@ def download_dem(las_fp, dem_fp = 'dem.tif'):
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2dem(args, debug):
-    # get in directory to work in
-    in_dir = args.get('<in_dir>')
+def las2uncorrectedDEM(in_dir, debug):
+    """
+    Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
+    builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
+
+    Parameters:
+    in_dir (str): filepath to directory to run in
+    debug (bool): lots of yakety yak or not?
+
+    Returns:
+    outtif (str): filepath to output DTM tiff
+    outlas (str): filepath to output DTM laz file
+    """
     #set start time
     start_time = datetime.now()
     # checks on directory and user update
@@ -209,13 +219,11 @@ def las2dem(args, debug):
 
     # set up sub directories
     results_dir = join(in_dir, 'results')
-    log_dir = join(in_dir, 'logs')
-    log.debug(f"Creating Directories: {results_dir} and {log_dir}")
-    for d in [results_dir, log_dir]:
-        os.makedirs(d, exist_ok= True)
+    os.makedirs(results_dir, exist_ok= True)
 
     # check for overwrite
     outtif = join(results_dir, f'{basename(in_dir)}.tif')
+    outlas = join(results_dir, f'{basename(in_dir)}.laz')
     if exists(outtif):
         while True:
             ans = input("Result tif already exists. Enter y to overwrite and n to cancel:")
@@ -237,7 +245,7 @@ def las2dem(args, debug):
     log.debug(f"Downloaded dem to {dem_fp}")
 
     log.info("Creating JSON Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = join(results_dir, f'{basename(in_dir)}.laz'), outtif = outtif, dem_fp = dem_fp)
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running PDAL pipeline")
@@ -250,17 +258,29 @@ def las2dem(args, debug):
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")
 
+    return outtif, outlas
+
 
 if __name__ == '__main__':
     # get command line args
     args = docopt(__doc__)
     # set debugging level
     debug = args.get('-d')
+    in_dir = args.get('<in_dir>')
+
+    # setup logging
+    log_dir = join(in_dir, 'logs')
+    os.makedirs(log_dir, exist_ok= True)
+    logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(join(log_dir, 'las2uncorrectedDEM.log')),
+        logging.StreamHandler(sys.stdout)]
+    )
     log = logging.getLogger(__name__)
     if debug:
         log.setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
-    logging.basicConfig()
+
     # run main function
-    las2dem(args, debug)
+    outtif, outlas = las2uncorrectedDEM(in_dir, debug)

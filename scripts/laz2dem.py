@@ -241,7 +241,7 @@ def las2uncorrectedDEM(in_dir, debug):
         mosaic_fp = mosaic_laz(in_dir)
 
     log.info("Starting DEM download...")
-    dem_fp, crs, project = download_dem(mosaic_fp)
+    dem_fp, crs, project = download_dem(mosaic_fp, dem_fp = join(results_dir, 'dem.tif'))
     log.debug(f"Downloaded dem to {dem_fp}")
 
     log.info("Creating JSON Pipeline...")

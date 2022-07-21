@@ -1,15 +1,11 @@
 """
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
-
 Usage:
     laz2dem.py <in_dir> [-d debug]
 
-
 Options:
     -d debug      turns on debugging logging  [default: True]
-
-
 """
 from docopt import docopt
 import json

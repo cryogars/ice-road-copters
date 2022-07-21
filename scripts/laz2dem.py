@@ -1,0 +1,268 @@
+"""
+Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
+
+
+Usage:
+    laz2dem.py <in_dir> [-d debug]
+
+
+Options:
+    -d debug      turns on debugging logging  [default: True]
+
+
+"""
+from docopt import docopt
+import json
+from posixpath import expanduser
+import laspy
+import rioxarray as rxa
+import os
+from os.path import join, basename, exists, dirname, abspath, isdir
+from glob import glob
+import shlex
+from datetime import datetime
+import subprocess
+import py3dep
+import pyproj
+from shapely.geometry import box
+from shapely.ops import transform
+import sys
+
+import logging
+
+def cl_call(command):
+    """
+    Runs shell commands in python and returns output
+    Got this from a stack overflow but can't find it now...
+
+    Parameters:
+    command (str or list): list of commands. if string is passed we will try and
+    parse to list using shelex
+    """
+    if type(command) == str:
+        command = shlex.split(command)
+
+    process = subprocess.Popen(command, 
+                           stdout=subprocess.PIPE,
+                           universal_newlines=True)
+
+    while True:
+        output = process.stdout.readline()
+        log.info(output.strip())
+        # Do something else
+        return_code = process.poll()
+        if return_code is not None:
+            log.info(f'RETURN CODE {return_code}')
+            # Process has finished, read rest of the output 
+            for output in process.stdout.readlines():
+                log.info(output.strip())
+            break
+
+def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2dem', json_dir = './jsons'):
+    """
+    Creates JSON Pipeline for standard las point cloud to DTM.
+    Filters include: dem, elm, outlier
+    SMRF Classifier and writes ground classified points to las and tif
+
+    Parameters:
+    in_fp (str): filepath to las file to be run
+    outlas (str): filepath to save dtm las
+    outtif (str): filepath to save dtm tif
+    json_name (str) [optional]: name of json to save [default: las2dem.json]
+    json_dir (str) [optional]: name of json subdirectory to create [default: ./json]
+
+    Returns:
+    json_to_use (str): filepath of created json pipeline
+    """
+    ## make sure path is in format pdal likes
+    in_fp = abspath(in_fp)
+    outlas = abspath(outlas)
+    outtif = abspath(outtif)
+
+    assert exists(in_fp), f'In filepath {in_fp} does not exist'
+    assert exists(dem_fp), f'DEM filepath {in_fp} does not exist'
+
+    # good docs on types of filters used: https://pdal.io/stages/filters.html#ground-unclassified
+    # Reads in mosaiced las file
+    reader = {"type": "readers.las", "filename": in_fp
+    }
+
+    # Filters out points with 0 returns
+    mongo_filter = {"type": "filters.mongo",\
+        "expression": {"$and": [\
+            {"ReturnNumber": {"$gt": 0}},\
+                {"NumberOfReturns": {"$gt": 0}} ] } 
+    }
+    # Filter out points far away from our dem
+    dem_filter = {
+            "type":"filters.dem",
+            "raster":dem_fp,
+            "limits":"Z[25:35]"
+    }
+    # Extended Local Minimum filter
+    elm_filter = {"type": "filters.elm"
+    }
+    # Outlier filter
+    outlier_filter = {"type": "filters.outlier",\
+        "method": "statistical",\
+            "mean_k": 12,\
+                "multiplier": 2.2
+    }
+    # SMRF classifier for ground
+    smrf_classifier = {"type": "filters.smrf",\
+        "ignore": "Classification[7:7], NumberOfReturns[0:0], ReturnNumber[0:0]"
+    }
+    # Select ground points only
+    smrf_selecter = { 
+            "type":"filters.range",
+            "limits":"Classification[2:2]"
+    }
+    # Write las file
+    las_writer = {"type": "writers.las",\
+#     "where": "Classification[2:2]",\
+        "filename":outlas
+    }
+    # Write tif file
+    tif_writer = {"type": "writers.gdal",\
+    #     "where": "Classification[2:2]",\
+            "filename":outtif,
+            "resolution":1.0,
+            "output_type":"idw"
+    }
+    # set up pipeline
+    pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
+    # make json dir and fp
+    log.debug(f"Making JSON dir at {json_dir}")
+    os.makedirs(json_dir, exist_ok= True)
+    json_name = json_name.replace('.json','')
+    json_to_use = join(json_dir, f'{json_name}.json')
+    # write json fp out
+    with open(json_to_use,'w') as outfile:
+        json.dump(pipeline, outfile, indent = 2)
+    # add logging message for success #
+
+    return json_to_use
+
+def mosaic_laz(in_dir, out_fp = 'merge.laz', laz_prefix = ''):
+    """
+    Generates and run PDAL mosaic command.
+
+    Parameters:
+    in_dir (str): fp to directory full of .laz files to mosaic
+    out_fp (str) [optional]: out filepath to save [default: ./merge.laz]
+    laz_prefix (str) [optional]: prefix to append in case there are .laz files 
+    to avoid mosaicing [default: ""]
+    Returns:
+    mosaic_fp (str): filepath to mosaic output file
+    """
+    assert isdir(in_dir), f'{in_dir} is not a directory'
+    # generate searching command
+    in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.laz')))
+    # out fp to save to
+    mosaic_fp = join(in_dir, out_fp)
+    # set up mosaic command
+    mosaic_cmd = f'pdal merge {in_str} {mosaic_fp}'
+    log.debug(f"Using mosaic command: {mosaic_cmd}")
+    # run mosaic command
+    cl_call(mosaic_cmd)
+    
+    return mosaic_fp
+
+def download_dem(las_fp, dem_fp = 'dem.tif'):
+    """
+    Reads the crs and bounds of a las file and downloads a DEM from py3dep
+    Must be in the CONUS.
+
+    Parameters:
+    las_fp (str): filepath to las file to get bounds and crs
+    dem_fp (str) [optional]: filepath to save DEM at. [default = './dem.tif']
+
+    Returns:
+    crs (pyproj CRS): CRS object from las header
+    project (shapely transform): shapely transform used in conversion
+    """
+    # read crs of las file
+    with laspy.open(las_fp) as las:
+        hdr = las.header
+        crs = hdr.parse_crs()
+    log.debug(f"CRS used is {crs}")
+    # create transform from wgs84 to las crs
+    wgs84 = pyproj.CRS('EPSG:4326')
+    project = pyproj.Transformer.from_crs(crs, wgs84 , always_xy=True).transform
+    # calculate bounds of las file in wgs84
+    utm_bounds = box(hdr.mins[0], hdr.mins[1], hdr.maxs[0], hdr.maxs[1])
+    wgs84_bounds = transform(project, utm_bounds)
+    # download dem inside bounds
+    dem_wgs = py3dep.get_map('DEM', wgs84_bounds, resolution = 1, crs = 'epsg:4326')
+    log.debug(f"DEM bounds: {dem_utm.rio.bounds()}. Size: {dem_utm.size}")
+    # reproject to las crs and save
+    dem_utm = dem_wgs.rio.reproject(crs)
+    dem_utm.rio.to_raster(dem_fp)
+    log.debug(f"Saved to {dem_fp}")
+    return dem_fp, crs, project
+
+def las2dem(args, debug):
+    # get in directory to work in
+    in_dir = args.get('<in_dir>')
+    #set start time
+    start_time = datetime.now()
+    # checks on directory and user update
+    assert isdir(in_dir), f'Provided: {in_dir} is not a directory. Provide directory with .laz files.'
+    log.info(f"Working in directory: {in_dir}")
+    os.chdir(in_dir)
+
+    # set up sub directories
+    results_dir = join(in_dir, 'results')
+    log_dir = join(in_dir, 'logs')
+    log.debug(f"Creating Directories: {results_dir} and {log_dir}")
+    for d in [results_dir, log_dir]:
+        os.makedirs(d, exist_ok= True)
+
+    # check for overwrite
+    outtif = join(results_dir, f'{basename(in_dir)}.tif')
+    if exists(outtif):
+        while True:
+            ans = input("Result tif already exists. Enter y to overwrite and n to cancel:")
+            if ans.lower() == 'n':
+                sys.exit(0)
+            elif ans.lower() == 'y':
+                break
+
+    # mosaic
+    log.info("Starting to mosaic las files...")
+    las_fps = glob(join(in_dir, '*.laz'))
+    log.debug(f"Number of las files: {len(las_fps)}")
+    mosaic_fp = mosaic_laz(in_dir)
+
+    log.info("Starting DEM download...")
+    dem_fp, crs, project = download_dem(mosaic_fp)
+    log.debug(f"Downloaded dem to {dem_fp}")
+
+    log.info("Creating JSON Pipeline...")
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = join(results_dir, basename(in_dir).laz), outtif = outtif, dem_fp = dem_fp)
+    log.debug(f"JSON to use is {json_to_use}")
+
+    log.info("Running PDAL pipeline")
+    if debug:
+        pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
+    else:
+        pipeline_cmd = f'pdal pipeline -i {json_to_use}'
+    cl_call(pipeline_cmd)
+
+    end_time = datetime.now()
+    log.info(f"Completed! Run Time: {end_time - start_time}")
+
+
+if __name__ == '__main__':
+    # get command line args
+    args = docopt(__doc__)
+    # set debugging level
+    debug = args.get('-d')
+    log = logging.getLogger(__name__)
+    if debug:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
+    logging.basicConfig()
+    # run main function
+    las2dem(args, debug)

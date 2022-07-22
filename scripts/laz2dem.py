@@ -236,9 +236,8 @@ def las2uncorrectedDEM(in_dir, debug):
     log.info("Starting to mosaic las files...")
     las_fps = glob(join(in_dir, '*.laz'))
     log.debug(f"Number of las files: {len(las_fps)}")
-    mosaic_fp = join(in_dir, 'merge.laz')
-    if not exists(mosaic_fp):
-        mosaic_fp = mosaic_laz(in_dir)
+    mosaic_fp = join(results_dir, 'merge.laz')
+    mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp)
 
     log.info("Starting DEM download...")
     dem_fp, crs, project = download_dem(mosaic_fp, dem_fp = join(results_dir, 'dem.tif'))
@@ -267,7 +266,7 @@ if __name__ == '__main__':
     # set debugging level
     debug = args.get('-d')
     in_dir = args.get('<in_dir>')
-
+    in_dir = abspath(in_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
     os.makedirs(log_dir, exist_ok= True)

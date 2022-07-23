@@ -6,7 +6,7 @@ For our case, we used prior knowledge that HWY-21 running through our study site
 ![roads](./docs/roads.png)
 
 After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps.
-![snow](./docs/snow.jpg)
+![snow](./docs/snow.jpeg)
 
 
 ###  Setting things up! :hammer:

@@ -5,6 +5,9 @@ The goal of this program is to utilize existing USGS 3DEP 1 meter topography dat
 For our case, we used prior knowledge that HWY-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP.
 ![roads](./docs/roads.png)
 
+After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps.
+![snow](./docs/snow.jpg)
+
 
 ###  Setting things up! :hammer:
 

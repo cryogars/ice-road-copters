@@ -1,3 +1,5 @@
+# To run For now just run this script with no params
+
 # Import libraries
 import os
 
@@ -6,7 +8,7 @@ import geopandas as gpd
 import whitebox
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
-def laz_align(transform_area='hwy_21', buffer_meters=5, geoid=False):
+def laz_align(transform_area='hwy_21', buffer_meters=2.5, geoid=False):
     '''
     to be ran after Zach's code... transform_area = 'hwy_21' for now
     '''
@@ -28,7 +30,7 @@ def laz_align(transform_area='hwy_21', buffer_meters=5, geoid=False):
     # Clip clean_PC to the transform_area using whitebox-python
     wbt = whitebox.WhiteboxTools()
     wbt.work_dir = dirname
-    wbt.clip_lidar_to_polygon(i='merge.laz', 
+    wbt.clip_lidar_to_polygon(i='data.laz', 
                               polygons='buffered_area.shp',
                               output='clipped_PC.laz')
     print('[INFO] PC successfully clipped to area')
@@ -52,12 +54,20 @@ def laz_align(transform_area='hwy_21', buffer_meters=5, geoid=False):
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
     print('[INFO] Beginning pc_align function...')
     os.system('./ASP/bin/pc_align --max-displacement 5 --highest-accuracy \
-                --save-transformed-source-points --save-inv-transformed-reference-points \
                 ./data/results/ref_PC.tif ./data/results/clipped_PC.laz -o ./data/results/pc-align/run')
     
-    
-    # Apply transformation matrix to laz file (FINAL)..Calculate RMSE based on changes...
+    # Apply transformation matrix to the entire laz and output points
+    # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
+    os.system('./ASP/bin/pc_align --max-displacement -1 --num-iterations 0 \
+                --initial-transform data/results/pc-align/run-transform.txt \
+                --save-transformed-source-points                            \
+                ./data/results/ref_PC.tif ./data/results/data.laz   \
+                -o ./data/results/pc-transform/run')
+
+    # Grid the output to a 1 meter tif
+    os.system('./ASP/bin/point2dem ./data/results/pc-transform/run-trans_source.laz \
+                --dem-spacing 1 --search-radius-factor 2 -o ./data/results/pc-grid/run')
 
 
-# For Testing
+# To run For now just run this script
 laz_align()

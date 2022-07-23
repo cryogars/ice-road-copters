@@ -1,4 +1,4 @@
-# ice-road-copters
+# ice-road-copters :helicopter:
 The goal of this program is to utilize existing USGS 3DEP 1 meter topography data and Ames Stereo Pipeline (ASP) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points.
 ![heli_bsu](./docs/heli.png)
 
@@ -6,7 +6,7 @@ For our case, we used prior knowledge that HWY-21 running through our study site
 ![roads](./docs/roads.png)
 
 
-###  Setting up things up
+###  Setting things up! :hammer:
 
 #### Downloading ASP precompiled binaries
 1. Download latest stable build (Linux or OSx): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory
@@ -19,6 +19,3 @@ For our case, we used prior knowledge that HWY-21 running through our study site
 $ conda env create -f iceroad_env.yaml
 $ conda activate iceroad
 ```
-
-
-### USGS 1m DEM tiles were downloaded along the HWY-21 using `wget` via https://apps.nationalmap.gov/downloader/

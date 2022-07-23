@@ -6,6 +6,10 @@ dependencies:
   - python=3.8
   - python-pdal
   - gdal
+  - rioxarray
+  - py3dep
+  - shapely
+  - docopt
   - pip
   - pip:
     - whitebox
@@ -14,3 +18,4 @@ dependencies:
     - rasterio
     - xarray
     - pandas
+    - laspy[lazrs,laszip]

@@ -140,12 +140,8 @@ dmypy.json
 
 # Project specific
 ASP/
-data_raw/*
-data_processed/*
+data/*
 !data_raw/.gitkeep
-!data_processed/.gitkeep
-usgs_1m_tiles/*
-!usgs_1m_tiles/.gitkeep
 test/
 *.tif
 *.ttff

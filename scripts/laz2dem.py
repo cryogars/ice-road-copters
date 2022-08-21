@@ -270,12 +270,19 @@ if __name__ == '__main__':
     in_dir = abspath(in_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
+    dt = datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
     os.makedirs(log_dir, exist_ok= True)
-    logging.basicConfig(
-    level=logging.INFO,
+
+    old_logs = glob(join(log_dir, 'las2uncorrectedDEM*.log'))
+    if old_logs:
+        vnum = max([int(basename(i).split('.')[0].split('-')[-1].replace('r','')) for i in sorted(old_logs)]) + 1
+    else:
+        vnum = 1
+
+    logging.basicConfig(level=logging.INFO,
     format=f"(ice-road-copters {__name__} %(levelname)s) %(message)s",
     handlers=[
-        logging.FileHandler(join(log_dir, 'las2uncorrectedDEM.log')),
+        logging.FileHandler(join(log_dir, f'las2uncorrectedDEM-r{vnum}.log')),
         logging.StreamHandler(sys.stdout)]
     )
     log = logging.getLogger(__name__)

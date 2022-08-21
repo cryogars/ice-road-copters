@@ -27,7 +27,7 @@ from shapely.geometry import box
 from shapely.ops import transform
 
 
-def cl_call(command):
+def cl_call(command, log):
     """
     Runs shell commands in python and returns output
     Got this from a stack overflow but can't find it now...
@@ -38,6 +38,7 @@ def cl_call(command):
     """
     if type(command) == str:
         command = shlex.split(command)
+    log.info('Subprocess: "' + ' '.join(command) + '"')
 
     process = subprocess.Popen(command, 
                            stdout=subprocess.PIPE,
@@ -140,7 +141,7 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2dem', j
 
     return json_to_use
 
-def mosaic_laz(in_dir, out_fp = 'merge.laz', laz_prefix = ''):
+def mosaic_laz(in_dir, log, out_fp = 'merge.laz', laz_prefix = ''):
     """
     Generates and run PDAL mosaic command.
 
@@ -161,7 +162,7 @@ def mosaic_laz(in_dir, out_fp = 'merge.laz', laz_prefix = ''):
     mosaic_cmd = f'pdal merge {in_str} {mosaic_fp}'
     log.debug(f"Using mosaic command: {mosaic_cmd}")
     # run mosaic command
-    cl_call(mosaic_cmd)
+    cl_call(mosaic_cmd, log)
     
     return mosaic_fp
 
@@ -198,7 +199,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif'):
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug):
+def las2uncorrectedDEM(in_dir, debug, log):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -238,7 +239,7 @@ def las2uncorrectedDEM(in_dir, debug):
     las_fps = glob(join(in_dir, '*.laz'))
     log.debug(f"Number of las files: {len(las_fps)}")
     mosaic_fp = join(results_dir, 'merge.laz')
-    mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp)
+    mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp, log = log)
 
     log.info("Starting DEM download...")
     dem_fp, crs, project = download_dem(mosaic_fp, dem_fp = join(results_dir, 'dem.tif'))
@@ -253,27 +254,17 @@ def las2uncorrectedDEM(in_dir, debug):
         pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
     else:
         pipeline_cmd = f'pdal pipeline -i {json_to_use}'
-    cl_call(pipeline_cmd)
+    cl_call(pipeline_cmd, log)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")
 
     return outtif, outlas
 
-
-if __name__ == '__main__':
-    # get command line args
-    args = docopt(__doc__)
-    # set debugging level
-    debug = args.get('-d')
-    in_dir = args.get('<in_dir>')
-    in_dir = abspath(in_dir)
-    # setup logging
-    log_dir = join(in_dir, 'logs')
-    dt = datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
+def iceroad_logging(log_dir, debug, log_prefix = 'las2uncorrectedDEM' ):
     os.makedirs(log_dir, exist_ok= True)
 
-    old_logs = glob(join(log_dir, 'las2uncorrectedDEM*.log'))
+    old_logs = glob(join(log_dir, f'{log_prefix}*.log'))
     if old_logs:
         vnum = max([int(basename(i).split('.')[0].split('-')[-1].replace('r','')) for i in sorted(old_logs)]) + 1
     else:
@@ -282,12 +273,25 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
     format=f"(ice-road-copters {__name__} %(levelname)s) %(message)s",
     handlers=[
-        logging.FileHandler(join(log_dir, f'las2uncorrectedDEM-r{vnum}.log')),
+        logging.FileHandler(join(log_dir, f'{log_prefix}-r{vnum}.log')),
         logging.StreamHandler(sys.stdout)]
     )
     log = logging.getLogger(__name__)
     if debug:
         log.setLevel(logging.DEBUG)
+    
+    return log
+
+if __name__ == '__main__':
+    # get command line args
+    args = docopt(__doc__)
+    debug = args.get('-d')
+    in_dir = args.get('<in_dir>')
+    # convert to abspath
+    in_dir = abspath(in_dir)
+    # setup logging
+    log_dir = join(in_dir, 'logs')
+    log = iceroad_logging(log_dir, debug)
 
     # run main function
-    outtif, outlas = las2uncorrectedDEM(in_dir, debug)
+    outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)

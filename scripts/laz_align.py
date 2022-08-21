@@ -15,10 +15,10 @@ def laz_align(transform_area='hwy_21', buffer_meters=2.5, geoid=False):
     
     # Hard code in /data/results as the directory
     # This works as long as user supplies las/laz in `data`... all following zach's code
-    dirname =  os.path.abspath('./data/results/')
+    dirname =  os.path.abspath('..test/subset2/results/')
 
     # TODO: since the buffer is in meters, need to ensure inputs are in UTM and same
-    path = './transform_area/'+transform_area+'/*.shp'
+    path = '../transform_area/'+transform_area+'/*.shp'
     for filename in glob.glob(path):
         # Read in transform area (ice roads)
         gdf = gpd.read_file(filename)

@@ -7,25 +7,25 @@ Usage:
 Options:
     -d debug      turns on debugging logging  [default: True]
 """
-from docopt import docopt
 import json
-from posixpath import expanduser
-import laspy
-import rioxarray as rxa
-from rasterio.enums import Resampling
+import logging
 import os
-from os.path import join, basename, exists, dirname, abspath, isdir
-from glob import glob
 import shlex
-from datetime import datetime
 import subprocess
+import sys
+from datetime import datetime
+from glob import glob
+from os.path import abspath, basename, dirname, exists, isdir, join, expanduser
+
+import laspy
 import py3dep
 import pyproj
+import rioxarray as rxa
+from docopt import docopt
+from rasterio.enums import Resampling
 from shapely.geometry import box
 from shapely.ops import transform
-import sys
 
-import logging
 
 def cl_call(command):
     """

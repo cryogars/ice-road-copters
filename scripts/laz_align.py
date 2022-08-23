@@ -2,52 +2,82 @@
 
 # Import libraries
 import os
-from os.path import exists, join
+import sys
+from os.path import exists, join, basename, dirname
 import glob
 import geopandas as gpd
 import whitebox
-from laz2dem import iceroad_logging
+from laz2dem import iceroad_logging, cl_call
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
-def laz_align(transform_area='hwy_21', buffer_meters=2.5, geoid=False):
+def laz_align(work_dir, 
+            hwy_21_shp = '/home/zacharykeskinen/Documents/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            buffer_meters=2.5, 
+            geoid=False, 
+            asp_dir = None):
     '''
     to be ran after Zach's code... transform_area = 'hwy_21' for now
     '''
-    log = iceroad_logging('./data/logs', debug = True, log_prefix='laz_align')
+    if not asp_dir:
+        asp_dir = join(dirname(dirname(work_dir)), 'ASP', 'bin')
+    log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='laz_align')
+    log.info('Starting ASP align')
     # Hard code in /data/results as the directory
     # This works as long as user supplies las/laz in `data`... all following zach's code
-    dirname =  os.path.abspath('./data/results/')
+    # dirname =  os.path.abspath('./data/results/')
 
-    # TODO: since the buffer is in meters, need to ensure inputs are in UTM and same
-    path = './transform_area/'+transform_area+'/*.shp'
-    for filename in glob.glob(path):
-        # Read in transform area (ice roads)
-        gdf = gpd.read_file(filename)
-        # Buffer geom based on user input
-        gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
-        # Save buffered shpfile to directory we just made
-        gdf.to_file(dirname+'/buffered_area.shp')
+    # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
+    # Read in transform area (ice roads)
+    gdf = gpd.read_file(hwy_21_shp)
+    # Buffer geom based on user input
+    gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
+    # Save buffered shpfile to directory we just made
+    buff_shp = join(work_dir, 'buffered_area.shp')
+    gdf.to_file(buff_shp)
 
     # Clip clean_PC to the transform_area using whitebox-python
-    # wbt = whitebox.WhiteboxTools()
-    # wbt.work_dir = dirname
-    # wbt.clip_lidar_to_polygon(i='data.laz', 
-    #                           polygons='buffered_area.shp',
-    #                           output='clipped_PC.laz')
-    print(''.center(60, '-'))
-    log.info('PC successfully clipped to area')
-    os.chdir('/Users/zachkeskinen/Documents/ice-road-copters/')
-    print(exists('./data/results/dem.tif'))
+    wbt = whitebox.WhiteboxTools()
+    # wbt.work_dir = work_dir
+    input_laz = join(work_dir, basename(dirname(work_dir))+'.laz')
+    clipped_pc = join(work_dir, 'clipped_PC.laz')
+
+    if exists(clipped_pc):
+        while True:
+            ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
+            if ans.lower() == 'n':
+                break
+            elif ans.lower() == 'y':
+                wbt.clip_lidar_to_polygon(i=input_laz, 
+                            polygons=buff_shp,
+                            output=clipped_pc)
+
+    # Check to see if output clipped point cloud was created
+    if not exists(clipped_pc):
+        log.info('Output point cloud not created')
+        return 1
+
+    log.info('Point cloud clipped to area')
+
     if not geoid:
         # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-        os.system('./ASP/bin/gdalwarp -t_srs EPSG:26911 ./data/results/dem.tif ./data/results/demNAD_tmp.tif')
-
+        in_dem = join(work_dir, 'dem.tif')
+        nad83_dem = join(work_dir, 'demNAD_tmp.tif')
+        gdal_func = join(asp_dir, 'gdalwarp')
+        cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
         # Use ASP to convert from geoid to ellipsoid
-        os.system('./ASP/bin/dem_geoid --nodata_value -9999 ./data/results/demNAD_tmp.tif \
-                   --geoid NAVD88 --reverse-adjustment -o ./data/results/dem_wgs')
-
+        ellisoid_dem = join(work_dir, 'dem_wgs')
+        geoid_func = join(asp_dir, 'dem_geoid')
+        cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
+                   --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
         # Set it back to WGS84
-        os.system('./ASP/bin/gdalwarp -t_srs EPSG:32611 ./data/results/dem_wgs-adj.tif ./data/results/ref_PC.tif')
+        ref_dem = join(work_dir, 'ref_PC.tif')
+        cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
+
+        # check for success
+        if not exists(ref_dem):
+            log.info('Conversion to ellipsoid failed')
+            return 1
+
         log.info('Merged DEM converted to ellipsoid per user input')
 
     else:
@@ -55,22 +85,27 @@ def laz_align(transform_area='hwy_21', buffer_meters=2.5, geoid=False):
 
 
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
+    pc_align_func = join(asp_dir, 'pc_align')
+    align_pc = join(work_dir,'pc-align','run')
     log.info('Beginning pc_align function...')
-    os.system('./ASP/bin/pc_align --max-displacement 5 --highest-accuracy \
-                ./data/results/ref_PC.tif ./data/results/clipped_PC.laz -o ./data/results/pc-align/run')
+    cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to somwthing better
     
     # Apply transformation matrix to the entire laz and output points
     # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
-    os.system('./ASP/bin/pc_align --max-displacement -1 --num-iterations 0 \
-                --initial-transform data/results/pc-align/run-transform.txt \
+    transform_pc = join(work_dir,'pc-transform','run')
+    cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                --initial-transform {align_pc}-transform.txt \
                 --save-transformed-source-points                            \
-                ./data/results/ref_PC.tif ./data/results/data.laz   \
-                -o ./data/results/pc-transform/run')
+                {ref_dem} {input_laz}   \
+                -o {transform_pc}', log)
 
     # Grid the output to a 1 meter tif
-    os.system('./ASP/bin/point2dem ./data/results/pc-transform/run-trans_source.laz \
-                --dem-spacing 1 --search-radius-factor 2 -o ./data/results/pc-grid/run')
+    point2dem_func = join(asp_dir, 'point2dem')
+    final_tif = join(work_dir, 'pc-grid', 'run')
+    cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
+                --dem-spacing 1 --search-radius-factor 2 -o {final_tif}', log)
 
 
 # To run For now just run this script
-laz_align()
+laz_align('/home/zacharykeskinen/Documents/ice-road-copters/data/results',)

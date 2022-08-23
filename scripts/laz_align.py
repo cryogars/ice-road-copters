@@ -58,15 +58,16 @@ def laz_align(work_dir,
     clipped_pc = join(work_dir, 'clipped_PC.laz')
 
     if exists(clipped_pc):
-        a = 0
-        while a == 0:
+        done = False
+        while not done:
             ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                a = ans
+                done = True
             elif ans.lower() == 'y':
                 wbt.clip_lidar_to_polygon(i=input_laz, 
                             polygons=buff_shp,
                             output=clipped_pc)
+                done = True
                 
 
     # Check to see if output clipped point cloud was created

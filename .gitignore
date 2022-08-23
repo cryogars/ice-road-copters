@@ -143,6 +143,7 @@ ASP/
 data/*
 data
 old_data
+data_full
 !data_raw/.gitkeep
 test/
 *.tif

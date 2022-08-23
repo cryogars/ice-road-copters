@@ -231,7 +231,7 @@ def las2uncorrectedDEM(in_dir, debug, log):
     outlas = join(results_dir, f'{basename(in_dir)}.laz')
     if exists(outtif):
         while True:
-            ans = input("Result tif already exists. Enter y to overwrite and n to use existing:")
+            ans = input("Uncorrected tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
                 return outtif, outlas
             elif ans.lower() == 'y':

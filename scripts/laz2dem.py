@@ -26,6 +26,7 @@ from rasterio.enums import Resampling
 from shapely.geometry import box
 from shapely.ops import transform
 
+log = logging.getLogger(__name__)
 
 def cl_call(command, log):
     """
@@ -212,8 +213,10 @@ def las2uncorrectedDEM(in_dir, debug, log):
     outtif (str): filepath to output DTM tiff
     outlas (str): filepath to output DTM laz file
     """
+    # log_dir = join(in_dir, 'logs')
+    # log = iceroad_logging(log_dir, debug, log_prefix = 'filter_classify')
     #set start time
-    start_time = datetime.now()
+    # start_time = datetime.now()
     # checks on directory and user update
     assert isdir(in_dir), f'Provided: {in_dir} is not a directory. Provide directory with .laz files.'
     log.info(f"Working in directory: {in_dir}")
@@ -228,9 +231,9 @@ def las2uncorrectedDEM(in_dir, debug, log):
     outlas = join(results_dir, f'{basename(in_dir)}.laz')
     if exists(outtif):
         while True:
-            ans = input("Result tif already exists. Enter y to overwrite and n to cancel:")
+            ans = input("Result tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                sys.exit(0)
+                return outtif, outlas
             elif ans.lower() == 'y':
                 break
 
@@ -256,8 +259,8 @@ def las2uncorrectedDEM(in_dir, debug, log):
         pipeline_cmd = f'pdal pipeline -i {json_to_use}'
     cl_call(pipeline_cmd, log)
 
-    end_time = datetime.now()
-    log.info(f"Completed! Run Time: {end_time - start_time}")
+    # end_time = datetime.now()
+    # log.info(f"Completed! Run Time: {end_time - start_time}")
 
     return outtif, outlas
 
@@ -290,8 +293,6 @@ if __name__ == '__main__':
     # convert to abspath
     in_dir = abspath(in_dir)
     # setup logging
-    log_dir = join(in_dir, 'logs')
-    log = iceroad_logging(log_dir, debug)
 
     # run main function
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)

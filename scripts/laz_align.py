@@ -16,7 +16,17 @@ def laz_align(work_dir,
             geoid=False, 
             asp_dir = None):
     '''
-    to be ran after Zach's code... transform_area = 'hwy_21' for now
+    Align point cloud using snow-off road polygon.
+
+    Parameters:
+    work_dir (str): filepath to directory to run in
+    hwy_21_shp (str): filepath to shapefile to clip point cloud to
+    buffer_meters (float): number of meters to buffer geometry
+    geoid (bool): leave as geoid or convert to ellispoid
+    asp_dir (str): filepath to ASP bin directory
+
+    Returns:
+    final_tif (str): filepath to output corrected point cloud
     '''
     if not asp_dir:
         asp_dir = abspath(join(dirname(dirname(work_dir)), 'ASP', 'bin'))
@@ -108,6 +118,12 @@ def laz_align(work_dir,
     final_tif = join(work_dir, 'pc-grid', 'run')
     cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
                 --dem-spacing 1 --search-radius-factor 2 -o {final_tif}', log)
+    
+    if not exists(final_tif):
+        log.info('No final product created')
+        return 1
+        
+    return final_tif
 
 
 # To run For now just run this script

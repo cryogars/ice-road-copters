@@ -194,7 +194,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif'):
     dem_wgs = py3dep.get_map('DEM', wgs84_bounds, resolution=1, crs='EPSG:4326')
     log.debug(f"DEM bounds: {dem_wgs.rio.bounds()}. Size: {dem_wgs.size}")
     # reproject to las crs and save
-    dem_utm = dem_wgs.rio.reproject(crs, resampling=Resampling.cubic_spline)
+    dem_utm = dem_wgs.rio.reproject(crs, resampling = Resampling.cubic_spline)
     dem_utm.rio.to_raster(dem_fp)
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project

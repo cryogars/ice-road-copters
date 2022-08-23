@@ -2,7 +2,7 @@
 
 # Import libraries
 import os
-
+from os.path import exists, join
 import glob
 import geopandas as gpd
 import whitebox
@@ -29,13 +29,15 @@ def laz_align(transform_area='hwy_21', buffer_meters=2.5, geoid=False):
         gdf.to_file(dirname+'/buffered_area.shp')
 
     # Clip clean_PC to the transform_area using whitebox-python
-    wbt = whitebox.WhiteboxTools()
-    wbt.work_dir = dirname
-    wbt.clip_lidar_to_polygon(i='data.laz', 
-                              polygons='buffered_area.shp',
-                              output='clipped_PC.laz')
+    # wbt = whitebox.WhiteboxTools()
+    # wbt.work_dir = dirname
+    # wbt.clip_lidar_to_polygon(i='data.laz', 
+    #                           polygons='buffered_area.shp',
+    #                           output='clipped_PC.laz')
+    print(''.center(60, '-'))
     log.info('PC successfully clipped to area')
-
+    os.chdir('/Users/zachkeskinen/Documents/ice-road-copters/')
+    print(exists('./data/results/dem.tif'))
     if not geoid:
         # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
         os.system('./ASP/bin/gdalwarp -t_srs EPSG:26911 ./data/results/dem.tif ./data/results/demNAD_tmp.tif')

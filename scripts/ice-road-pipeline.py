@@ -48,6 +48,8 @@ if __name__ == '__main__':
 
     # run main function
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)
+    if asp_dir == 'False':
+        asp_dir = False
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
 
     end_time = datetime.now()

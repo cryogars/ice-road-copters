@@ -111,4 +111,5 @@ def laz_align(work_dir,
 
 
 # To run For now just run this script
-laz_align('/home/zacharykeskinen/Documents/ice-road-copters/data/results',)
+if __name__ == '__main__':
+    laz_align('/home/zacharykeskinen/Documents/ice-road-copters/data/results')

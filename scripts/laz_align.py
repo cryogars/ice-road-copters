@@ -3,7 +3,7 @@
 # Import libraries
 import os
 import sys
-from os.path import exists, join, basename, dirname
+from os.path import exists, join, basename, dirname, abspath, isdir
 import glob
 import geopandas as gpd
 import whitebox
@@ -20,6 +20,9 @@ def laz_align(work_dir,
     '''
     if not asp_dir:
         asp_dir = join(dirname(dirname(work_dir)), 'ASP', 'bin')
+    work_dir = abspath(work_dir)
+    assert isdir(work_dir), 'work_dir must be directory'
+
     log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='laz_align')
     log.info('Starting ASP align')
     # Hard code in /data/results as the directory

@@ -19,7 +19,7 @@ def laz_align(work_dir,
     to be ran after Zach's code... transform_area = 'hwy_21' for now
     '''
     if not asp_dir:
-        asp_dir = join(dirname(dirname(work_dir)), 'ASP', 'bin')
+        asp_dir = abspath(join(dirname(dirname(work_dir)), 'ASP', 'bin'))
     work_dir = abspath(work_dir)
     assert isdir(work_dir), 'work_dir must be directory'
 

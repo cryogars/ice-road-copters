@@ -8,6 +8,9 @@ import glob
 import geopandas as gpd
 import whitebox
 from laz2dem import iceroad_logging, cl_call
+import logging
+
+log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
@@ -33,7 +36,7 @@ def laz_align(work_dir,
     work_dir = abspath(work_dir)
     assert isdir(work_dir), 'work_dir must be directory'
 
-    log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='laz_align')
+    # log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='asp_align')
     log.info('Starting ASP align')
     # Hard code in /data/results as the directory
     # This works as long as user supplies las/laz in `data`... all following zach's code
@@ -122,7 +125,7 @@ def laz_align(work_dir,
     if not exists(final_tif):
         log.info('No final product created')
         return 1
-        
+
     return final_tif
 
 

@@ -2,11 +2,12 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-pipeline.py <in_dir> [-d debug] [-a asp_dir]
+    ice-pipeline.py <in_dir> [-d debug] [-a asp_dir] [-s shp_fp]
 
 Options:
     -d debug      turns on debugging logging  [default: True]
-    -a asp_dir    Directory with ASP binary files [default: False]
+    -a asp_dir    Directory with ASP binary files
+    -s shp_fp   Shapefile to align with
 """
 
 from docopt import docopt
@@ -29,9 +30,14 @@ if __name__ == '__main__':
     args = docopt(__doc__)
     debug = args.get('-d')
     asp_dir = args.get('-a')
+    shp_fp = args.get('s')
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
+    if shp_fp:
+        shp_fp = abspath(shp_fp)
+    if asp_dir:
+        asp_dir = abspath(asp_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
     os.makedirs(log_dir, exist_ok= True)
@@ -54,9 +60,8 @@ if __name__ == '__main__':
 
     # run main function
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)
-    if asp_dir == 'False':
-        asp_dir = False
-    aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
+
+    aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir, hwy_21_shp=shp_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

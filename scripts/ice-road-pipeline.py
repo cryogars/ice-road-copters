@@ -30,7 +30,7 @@ if __name__ == '__main__':
     args = docopt(__doc__)
     debug = args.get('-d')
     asp_dir = args.get('-a')
-    shp_fp = args.get('s')
+    shp_fp = args.get('-s')
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)

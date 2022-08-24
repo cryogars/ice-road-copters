@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir, hwy_21_shp=shp_fp)
     if aligned_tif == -1:
-        raise 'Failed to align to shapefile.'
+        raise Exception('Failed to align to shapefile.')
         
 
     end_time = datetime.now()

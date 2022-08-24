@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
-            hwy_21_shp = '/home/zacharykeskinen/Documents/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            hwy_21_shp = '/Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
-            geoid=False, 
+            dem_is_geoid=False, 
             asp_dir = None):
     '''
     Align point cloud using snow-off road polygon.
@@ -38,26 +38,26 @@ def laz_align(work_dir,
 
     # log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='asp_align')
     log.info('Starting ASP align')
-    # Hard code in /data/results as the directory
-    # This works as long as user supplies las/laz in `data`... all following zach's code
-    # dirname =  os.path.abspath('./data/results/')
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
     # Read in transform area (ice roads)
     gdf = gpd.read_file(hwy_21_shp)
+
     # Buffer geom based on user input
     gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
+
     # Save buffered shpfile to directory we just made
     buff_shp = join(work_dir, 'buffered_area.shp')
     gdf.to_file(buff_shp)
 
     # Clip clean_PC to the transform_area using whitebox-python
     wbt = whitebox.WhiteboxTools()
-    # wbt.work_dir = work_dir
+    wbt.work_dir = work_dir
     input_laz = join(work_dir, basename(dirname(work_dir))+'.laz')
     clipped_pc = join(work_dir, 'clipped_PC.laz')
 
-    if exists(clipped_pc):
+    # If does exist give user option to clip lidar
+    if exists(clipped_pc): 
         done = False
         while not done:
             ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
@@ -68,18 +68,20 @@ def laz_align(work_dir,
                             polygons=buff_shp,
                             output=clipped_pc)
                 done = True
-                
-
-    # Check to see if output clipped point cloud was created
+    
+    # If does not exist - make clipped lidar
     if not exists(clipped_pc):
-        log.info('Output point cloud not created')
-        return 1
-
+        wbt.clip_lidar_to_polygon(i=input_laz, 
+                                  polygons=buff_shp,
+                                  output=clipped_pc)
     log.info('Point cloud clipped to area')
 
-    if not geoid:
+    # Define paths for next if statement
+    in_dem = join(work_dir, 'dem.tif')
+    ref_dem = join(work_dir, 'ref_PC.tif')
+    
+    if dem_is_geoid is True:
         # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-        in_dem = join(work_dir, 'dem.tif')
         nad83_dem = join(work_dir, 'demNAD_tmp.tif')
         gdal_func = join(asp_dir, 'gdalwarp')
         cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
@@ -89,7 +91,6 @@ def laz_align(work_dir,
         cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
                    --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
         # Set it back to WGS84
-        ref_dem = join(work_dir, 'ref_PC.tif')
         cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
 
         # check for success
@@ -100,8 +101,8 @@ def laz_align(work_dir,
         log.info('Merged DEM converted to ellipsoid per user input')
 
     else:
-        log.info('Merged DEM was kept as geoid per user input')
-
+        cl_call('cp '+ in_dem +' '+ ref_dem, log)
+        log.info('Merged DEM was kept in original ellipsoid form...')
 
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
     pc_align_func = join(asp_dir, 'pc_align')
@@ -123,8 +124,8 @@ def laz_align(work_dir,
     point2dem_func = join(asp_dir, 'point2dem')
     final_tif = join(work_dir, 'pc-grid', 'run')
     cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
-                --dem-spacing 1 --search-radius-factor 2 -o {final_tif}', log)
-    
+                --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
+
     if not exists(final_tif):
         log.info('No final product created')
         return 1
@@ -134,4 +135,4 @@ def laz_align(work_dir,
 
 # To run For now just run this script
 if __name__ == '__main__':
-    laz_align('/home/zacharykeskinen/Documents/ice-road-copters/data/results')
+    laz_align('/Users/brent/Documents/MCS/mcs0407/results')

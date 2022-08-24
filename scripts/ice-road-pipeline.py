@@ -2,11 +2,12 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-pipeline.py <in_dir> [-d debug] [-a asp_dir]
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir]
 
 Options:
-    -d debug      turns on debugging logging  [default: True]
-    -a asp_dir    Directory with ASP binary files [default: False]
+    -e user_dem    Path to user specifed DEM [default: False]
+    -d debug         turns on debugging logging  [default: True]
+    -a asp_dir       Directory with ASP binary files [default: False]
 """
 
 from docopt import docopt
@@ -14,6 +15,7 @@ from glob import glob
 from os.path import abspath, join, basename
 from laz2dem import iceroad_logging, las2uncorrectedDEM
 from laz_align import laz_align
+import rioxarray as rio
 from datetime import datetime
 import logging
 import sys
@@ -23,6 +25,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
     # get command line args
     args = docopt(__doc__)
+    user_dem = args.get('-e')
     debug = args.get('-d')
     asp_dir = args.get('-a')
     in_dir = args.get('<in_dir>')
@@ -49,10 +52,22 @@ if __name__ == '__main__':
         log.setLevel(logging.DEBUG)
 
     # run main function
-    outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)
+    if user_dem == 'False':
+        user_dem = False
+    #outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
     if asp_dir == 'False':
         asp_dir = False
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
+    
+    # difference two rasters to find snow depth
+    ref_dem_path = join(in_dir, 'results/ref_PC.tif')
+    snow_dem_path = join(in_dir, 'results/run?/pc_PC.tif')
+    snow_depth_path = join(in_dir, 'results/snowdepth.tif')
+    snowoff = rio.open_rasterio(ref_dem_path, masked=True)
+    snowon = rio.open_rasterio(snow_dem_path, masked=True) 
+    snowon_matched = snowon.rio.reproject_match(snowoff)
+    snowdepth = snowon_matched - snowoff
+    snowdepth.rio.to_raster(snow_depth_path)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

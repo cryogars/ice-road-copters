@@ -73,7 +73,7 @@ def laz_align(work_dir,
     # Check to see if output clipped point cloud was created
     if not exists(clipped_pc):
         log.info('Output point cloud not created')
-        return 1
+        return -1
 
     log.info('Point cloud clipped to area')
 
@@ -95,7 +95,7 @@ def laz_align(work_dir,
         # check for success
         if not exists(ref_dem):
             log.info('Conversion to ellipsoid failed')
-            return 1
+            return -1
 
         log.info('Merged DEM converted to ellipsoid per user input')
 
@@ -127,7 +127,7 @@ def laz_align(work_dir,
     
     if not exists(final_tif):
         log.info('No final product created')
-        return 1
+        return -1
 
     return final_tif
 

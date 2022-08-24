@@ -17,6 +17,7 @@ from laz_align import laz_align
 from datetime import datetime
 import logging
 import sys
+import os
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -29,6 +30,7 @@ if __name__ == '__main__':
     in_dir = abspath(in_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
+    os.makedirs(log_dir, exist_ok= True)
     log_prefix = 'ice-road-pipeline'
     old_logs = glob(join(log_dir, f'{log_prefix}*.log'))
     if old_logs:

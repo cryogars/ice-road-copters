@@ -62,6 +62,9 @@ if __name__ == '__main__':
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)
 
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir, hwy_21_shp=shp_fp)
+    if aligned_tif == -1:
+        log.warn('Failed to align to shapefile.')
+        break
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

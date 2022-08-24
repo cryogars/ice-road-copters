@@ -71,9 +71,7 @@ def laz_align(work_dir,
     else:
         wbt.clip_lidar_to_polygon(i=input_laz, 
                             polygons=buff_shp,
-                            output=clipped_pc)
-                done = True
-                
+                            output=clipped_pc)                
 
     # Check to see if output clipped point cloud was created
     if not exists(clipped_pc):

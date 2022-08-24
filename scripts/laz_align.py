@@ -1,5 +1,3 @@
-# To run For now just run this script with no params
-
 # Import libraries
 import os
 import sys
@@ -14,7 +12,7 @@ log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
-            hwy_21_shp = '/Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            hwy_21_shp = './transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
             asp_dir = None):
@@ -41,6 +39,7 @@ def laz_align(work_dir,
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
     # Read in transform area (ice roads)
+    hwy_21_shp = abspath(hwy_21_shp)
     gdf = gpd.read_file(hwy_21_shp)
 
     # Buffer geom based on user input
@@ -120,19 +119,20 @@ def laz_align(work_dir,
                 {ref_dem} {input_laz}   \
                 -o {transform_pc}', log)
 
-    # Grid the output to a 1 meter tif
+    # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
     point2dem_func = join(asp_dir, 'point2dem')
     final_tif = join(work_dir, 'pc-grid', 'run')
     cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
                 --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
 
-    if not exists(final_tif):
-        log.info('No final product created')
-        return 1
+    # For some reason this is returning 1 when a product IS created..
+    #if not exists(final_tif):
+    #    log.info('No final product created')
+    #    return 1
 
     return final_tif
 
 
 # To run For now just run this script
 if __name__ == '__main__':
-    laz_align('/Users/brent/Documents/MCS/mcs0407/results')
+    laz_align('/Users/brent/Documents/MCS/mcs0407/results') # does this do anything?...

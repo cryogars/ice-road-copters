@@ -252,7 +252,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem = None):
         log.debug(f"Downloaded dem to {dem_fp}")
     else:
         log.info("User DEM specified. Skipping DEM download...")
-        cl_call('cp '+ user_dem +' '+ dem_fp, log)
+        cl_call('cp '+ user_dem +' '+ dem_fp, log) #to ensure const. filenames for next step
 
     log.info("Creating JSON Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)

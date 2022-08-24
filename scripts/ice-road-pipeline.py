@@ -5,7 +5,7 @@ Usage:
     ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir]
 
 Options:
-    -e user_dem    Path to user specifed DEM [default: False]
+    -e user_dem      Path to user specifed DEM [default: False]
     -d debug         turns on debugging logging  [default: True]
     -a asp_dir       Directory with ASP binary files [default: False]
 """
@@ -54,14 +54,14 @@ if __name__ == '__main__':
     # run main function
     if user_dem == 'False':
         user_dem = False
-    #outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
+    outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
     if asp_dir == 'False':
         asp_dir = False
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
     
     # difference two rasters to find snow depth
     ref_dem_path = join(in_dir, 'results/ref_PC.tif')
-    snow_dem_path = join(in_dir, 'results/run?/pc_PC.tif')
+    snow_dem_path = join(in_dir, 'results/pc-grid/run-DEM.tif')
     snow_depth_path = join(in_dir, 'results/snowdepth.tif')
     snowoff = rio.open_rasterio(ref_dem_path, masked=True)
     snowon = rio.open_rasterio(snow_dem_path, masked=True) 

@@ -10,7 +10,7 @@ dependencies:
   - py3dep
   - shapely
   - docopt
-  - whitebox
+  - whitebox #remove if we end up using binaries on kelvin
   - matplotlib
   - geopandas
   - rasterio

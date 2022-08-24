@@ -18,7 +18,7 @@ from the ice-road-copters directory for example one can run:
 ```
 $ python ./scripts/ice-road-pipeline.py /Users/brent/Documents/MCS/mcs0407 -e /Users/brent/Documents/MCS/QSI_0.5M_PCDEM_USIDMC_20210917_20210917_WGS84_proj.tif -a /Users/brent/Code/ice-road-copters/ASP/bin 
 ```
-NOTE: that this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid or you are using py3dep functionality, you must change `dem_is_geoid=False` to `dem_is_geoid=True`. 
+NOTE: that this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid or you are using py3dep functionality, you must change `dem_is_geoid=False` to `dem_is_geoid=True`. Additionally, HWY-21 is hard coded for now into the align function but can be easily changed in the future if this code is used for say Bogus Basin Road.
 
 ## TODO:
  - get WhiteBoxTool (WBT) to work on Kelvin cluster

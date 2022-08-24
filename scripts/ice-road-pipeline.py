@@ -12,12 +12,16 @@ Options:
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename
-from laz2dem import iceroad_logging, las2uncorrectedDEM
-from laz_align import laz_align
 from datetime import datetime
 import logging
 import sys
 import os
+
+# local imports
+from laz2dem import iceroad_logging, las2uncorrectedDEM
+from laz_align import laz_align
+from dir_space_strip import replace_white_spaces
+
 
 if __name__ == '__main__':
     start_time = datetime.now()

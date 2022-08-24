@@ -243,11 +243,15 @@ def las2uncorrectedDEM(in_dir, debug, log):
     log.debug(f"Number of las files: {len(las_fps)}")
     mosaic_fp = join(results_dir, 'merge.laz')
     mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp, log = log)
-
+    if not exists(mosaic_fp):
+        log.warning('No mosaic created')
+        return -1
     log.info("Starting DEM download...")
     dem_fp, crs, project = download_dem(mosaic_fp, dem_fp = join(results_dir, 'dem.tif'))
     log.debug(f"Downloaded dem to {dem_fp}")
-
+    if not exists(join(results_dir, 'dem.tif')):
+        log.warning('No DEM downloaded')
+        return -1
     log.info("Creating JSON Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)
     log.debug(f"JSON to use is {json_to_use}")

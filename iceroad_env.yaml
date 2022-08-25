@@ -3,19 +3,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.8
+  - python=3.9
   - python-pdal
   - gdal
   - rioxarray
   - py3dep
   - shapely
   - docopt
-  - pip
-  - pip:
-    - whitebox
-    - matplotlib
-    - geopandas
-    - rasterio
-    - xarray
-    - pandas
-    - laspy[lazrs,laszip]
+  - whitebox #remove if we end up using binaries on kelvin
+  - matplotlib
+  - geopandas
+  - rasterio
+  - xarray
+  - pandas
+  - laspy[lazrs,laszip]

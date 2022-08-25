@@ -9,7 +9,7 @@ Options:
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
     -s shp_fp   Shapefile to align with
-
+"""
 
 from docopt import docopt
 from glob import glob

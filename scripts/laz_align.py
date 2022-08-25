@@ -144,6 +144,5 @@ def laz_align(work_dir,
     return final_tif
 
 
-# To run For now just run this script
 if __name__ == '__main__':
-    laz_align('/Users/brent/Documents/MCS/mcs0407/results') # does this do anything?...
+    laz_align('/Users/brent/Documents/MCS/mcs0407/results')

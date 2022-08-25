@@ -73,6 +73,16 @@ def laz_align(work_dir,
         wbt.clip_lidar_to_polygon(i=input_laz, 
                                   polygons=buff_shp,
                                   output=clipped_pc)
+    else:
+        wbt.clip_lidar_to_polygon(i=input_laz, 
+                            polygons=buff_shp,
+                            output=clipped_pc)                
+
+    # Check to see if output clipped point cloud was created
+    if not exists(clipped_pc):
+        log.info('Output point cloud not created')
+        return -1
+
     log.info('Point cloud clipped to area')
 
     # Define paths for next if statement
@@ -95,7 +105,7 @@ def laz_align(work_dir,
         # check for success
         if not exists(ref_dem):
             log.info('Conversion to ellipsoid failed')
-            return 1
+            return -1
 
         log.info('Merged DEM converted to ellipsoid per user input')
 
@@ -126,9 +136,10 @@ def laz_align(work_dir,
                 --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
 
     # For some reason this is returning 1 when a product IS created..
-    #if not exists(final_tif):
+    # if not exists(final_tif):
     #    log.info('No final product created')
-    #    return 1
+    #    return -1
+
 
     return final_tif
 

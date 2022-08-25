@@ -2,13 +2,14 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir]
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp]
 
 Options:
     -e user_dem      Path to user specifed DEM [default: False]
-    -d debug         turns on debugging logging  [default: True]
-    -a asp_dir       Directory with ASP binary files [default: False]
-"""
+    -d debug         turns on debugging logging
+    -a asp_dir       Directory with ASP binary files
+    -s shp_fp   Shapefile to align with
+
 
 from docopt import docopt
 from glob import glob
@@ -21,6 +22,12 @@ import logging
 import sys
 import os
 
+# local imports
+from laz2dem import iceroad_logging, las2uncorrectedDEM
+from laz_align import laz_align
+from dir_space_strip import replace_white_spaces
+
+
 if __name__ == '__main__':
     start_time = datetime.now()
     # get command line args
@@ -28,9 +35,14 @@ if __name__ == '__main__':
     user_dem = args.get('-e')
     debug = args.get('-d')
     asp_dir = args.get('-a')
+    shp_fp = args.get('-s')
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
+    if shp_fp:
+        shp_fp = abspath(shp_fp)
+    if asp_dir:
+        asp_dir = abspath(asp_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
     os.makedirs(log_dir, exist_ok= True)
@@ -52,12 +64,10 @@ if __name__ == '__main__':
         log.setLevel(logging.DEBUG)
 
     # run main function
-    if user_dem == 'False':
-        user_dem = False
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
-    if asp_dir == 'False':
-        asp_dir = False
     aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
+    if aligned_tif == -1:
+        raise Exception('Failed to align to shapefile.')
     
     # difference two rasters to find snow depth
     ref_dem_path = join(in_dir, 'results/ref_PC.tif')

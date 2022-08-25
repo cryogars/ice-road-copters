@@ -244,6 +244,10 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem = None):
     mosaic_fp = join(results_dir, 'merge.laz')
     mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp, log = log)
 
+    if not exists(mosaic_fp):
+        log.warning('No mosaic created')
+        return -1
+
     # Allowing the code to use user input DEM
     dem_fp = join(results_dir, 'dem.tif')
     if user_dem is False:
@@ -253,6 +257,9 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem = None):
     else:
         log.info("User DEM specified. Skipping DEM download...")
         cl_call('cp '+ user_dem +' '+ dem_fp, log) #to ensure const. filenames for next step
+    if not exists(join(results_dir, 'dem.tif')):
+        log.warning('No DEM downloaded')
+        return -1
 
     log.info("Creating JSON Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)

@@ -1,7 +1,14 @@
-import os
-parent_dir = '../test/'
+"""
+Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
-def replace(parent, replace = ''):
+Usage:
+    ice-pipeline.py <in_dir>
+"""
+
+import os
+from docopt import docopt
+
+def replace_white_spaces(parent, replace = ''):
     print(f'Warning! About to replace all whitespaces with "{replace}"s in {os.path.abspath(parent)}')
     print('Press y to continue...')
     ans = input()
@@ -16,4 +23,9 @@ def replace(parent, replace = ''):
     else:
         print(f'Passing...')
 
-replace(parent_dir)
+if __name__ == '__main__':
+    args = docopt(__doc__)
+    in_dir = args.get('<in_dir>')
+    # convert to abspath
+    in_dir = os.path.abspath(in_dir)
+    replace_white_spaces(in_dir)

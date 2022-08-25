@@ -2,7 +2,7 @@
 
 ###  Setting things up! :hammer:
 #### Downloading ASP precompiled binaries
-1. Download latest stable build (Linux or OSx): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory
+1. Download latest stable build (Linux or OSx (3.1.0)): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory. There are different builds for each OS, but you may have to dig a little to find the OSx build, it gets updated less.
 2. Rename this folder as `ASP` and remove the zipped file
 
 

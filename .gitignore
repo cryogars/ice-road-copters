@@ -140,7 +140,6 @@ dmypy.json
 
 # Project specific
 ASP/
-WBT/
 data/*
 data
 old_data

@@ -86,14 +86,14 @@ def laz_align(work_dir,
             if ans.lower() == 'n':
                 done = True
             elif ans.lower() == 'y':
-                cl_call('pdal pipeline clip.json', log) 
+                cl_call(f'pdal pipeline {json_path}', log) 
                 done = True
     
     # If does not exist - make clipped lidar
     if not exists(clipped_pc):
-        cl_call('pdal pipeline clip.json', log) 
+        cl_call(f'pdal pipeline {json_path}', log)  
     else:
-        cl_call('pdal pipeline clip.json', log)                
+        cl_call(f'pdal pipeline {json_path}', log)                 
 
     # Check to see if output clipped point cloud was created
     if not exists(clipped_pc):

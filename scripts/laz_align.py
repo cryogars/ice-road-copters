@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
-            hwy_21_shp = './transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            align_shp = '/Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
             asp_dir = None):
@@ -39,8 +39,7 @@ def laz_align(work_dir,
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
     # Read in transform area (ice roads)
-    hwy_21_shp = abspath(hwy_21_shp)
-    gdf = gpd.read_file(hwy_21_shp)
+    gdf = gpd.read_file(align_shp)
 
     # Buffer geom based on user input
     gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
@@ -93,7 +92,7 @@ def laz_align(work_dir,
     if not exists(clipped_pc):
         cl_call(f'pdal pipeline {json_path}', log)  
     else:
-        cl_call(f'pdal pipeline {json_path}', log)                 
+        pass               
 
     # Check to see if output clipped point cloud was created
     if not exists(clipped_pc):

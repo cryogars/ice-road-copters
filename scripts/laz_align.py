@@ -4,15 +4,15 @@ import sys
 from os.path import exists, join, basename, dirname, abspath, isdir
 import glob
 import geopandas as gpd
-import whitebox
 from laz2dem import iceroad_logging, cl_call
+import json
 import logging
 
 log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
-            hwy_21_shp = './transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            align_shp = '/Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
             asp_dir = None):
@@ -39,21 +39,43 @@ def laz_align(work_dir,
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
     # Read in transform area (ice roads)
-    hwy_21_shp = abspath(hwy_21_shp)
-    gdf = gpd.read_file(hwy_21_shp)
+    gdf = gpd.read_file(align_shp)
 
     # Buffer geom based on user input
     gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
+
+    # Create a new attribute to be used for PDAL clip/overlay
+    gdf['CLS'] = 42
 
     # Save buffered shpfile to directory we just made
     buff_shp = join(work_dir, 'buffered_area.shp')
     gdf.to_file(buff_shp)
 
-    # Clip clean_PC to the transform_area using whitebox-python
-    wbt = whitebox.WhiteboxTools()
-    wbt.work_dir = work_dir
+    # Clip clean_PC to the transform_area using PDAL
     input_laz = join(work_dir, basename(dirname(work_dir))+'.laz')
     clipped_pc = join(work_dir, 'clipped_PC.laz')
+    json_path = join(work_dir, 'clip.json')
+
+    # Create .json file for PDAL clip
+    json_pipeline = {
+        "pipeline": [
+            input_laz,
+            {
+                "type":"filters.overlay",
+                "dimension":"Classification",
+                "datasource":buff_shp,
+                "layer":"buffered_area",
+                "column":"CLS"
+            },
+            {
+                "type":"filters.range",
+                "limits":"Classification[42:42]"
+            },
+            clipped_pc
+        ]
+    }
+    with open(json_path,'w') as outfile:
+        json.dump(json_pipeline, outfile, indent = 2)
 
     # If does exist give user option to clip lidar
     if exists(clipped_pc): 
@@ -63,20 +85,14 @@ def laz_align(work_dir,
             if ans.lower() == 'n':
                 done = True
             elif ans.lower() == 'y':
-                wbt.clip_lidar_to_polygon(i=input_laz, 
-                            polygons=buff_shp,
-                            output=clipped_pc)
+                cl_call(f'pdal pipeline {json_path}', log) 
                 done = True
     
     # If does not exist - make clipped lidar
     if not exists(clipped_pc):
-        wbt.clip_lidar_to_polygon(i=input_laz, 
-                                  polygons=buff_shp,
-                                  output=clipped_pc)
+        cl_call(f'pdal pipeline {json_path}', log)  
     else:
-        wbt.clip_lidar_to_polygon(i=input_laz, 
-                            polygons=buff_shp,
-                            output=clipped_pc)                
+        pass               
 
     # Check to see if output clipped point cloud was created
     if not exists(clipped_pc):

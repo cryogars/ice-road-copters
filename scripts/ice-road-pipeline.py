@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     # run main function
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
-    aligned_tif = laz_align(join(in_dir, 'results'), asp_dir = asp_dir)
+    aligned_tif = laz_align(join(in_dir, 'results'), align_shp=shp_fp, asp_dir = asp_dir)
     if aligned_tif == -1:
         raise Exception('Failed to align to shapefile.')
     

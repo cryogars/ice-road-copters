@@ -200,7 +200,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif'):
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem = None):
+def las2uncorrectedDEM(in_dir, debug, log, user_dem):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -261,7 +261,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem = None):
         log.warning('No DEM downloaded')
         return -1
 
-    log.info("Creating JSON Pipeline...")
+    log.info("Creating PDAL Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)
     log.debug(f"JSON to use is {json_to_use}")
 

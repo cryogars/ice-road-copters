@@ -5,10 +5,10 @@ Usage:
     ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp]
 
 Options:
-    -e user_dem      Path to user specifed DEM [default: False]
+    -e user_dem      Path to user specifed DEM
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
-    -s shp_fp   Shapefile to align with
+    -s shp_fp        Shapefile to align with
 """
 
 from docopt import docopt
@@ -33,16 +33,22 @@ if __name__ == '__main__':
     # get command line args
     args = docopt(__doc__)
     user_dem = args.get('-e')
+    if user_dem:
+        user_dem = abspath(user_dem)
     debug = args.get('-d')
     asp_dir = args.get('-a')
+    if asp_dir:
+        asp_dir = abspath(asp_dir)
+    else:
+        asp_dir = abspath(join('ASP', 'bin'))
     shp_fp = args.get('-s')
+    if shp_fp:
+        shp_fp = abspath(shp_fp)
+    else:
+        raise("Provide filepath to .shp file for alignment")
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    if shp_fp:
-        shp_fp = abspath(shp_fp)
-    if asp_dir:
-        asp_dir = abspath(asp_dir)
     # setup logging
     log_dir = join(in_dir, 'logs')
     os.makedirs(log_dir, exist_ok= True)
@@ -61,7 +67,7 @@ if __name__ == '__main__':
     )
     log = logging.getLogger(__name__)
     if debug:
-        log.setLevel(logging.DEBUG)
+        log.setLevel(logging.DEBUG)  
 
     # run main function
     outtif, outlas = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)

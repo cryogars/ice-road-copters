@@ -34,7 +34,7 @@ NOTE: that this code assumes you are using a reference DEM (and heli lidar data)
 ###  Additional information :books:
 The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points.
 
-![heli_bsu](./docs/heli.png). We also provide an option for a user specified DEM (snow-off).
+![heli_bsu](./docs/heli.png) We also provide an option for a user specified DEM (snow-off).
 
 For our case, we used prior knowledge that HWY-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP.
 

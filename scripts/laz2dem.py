@@ -249,10 +249,9 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
         while True:
             ans = input("Uncorrected tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                return outtif, outlas
+                return outtif, outlas, canopy_laz
             elif ans.lower() == 'y':
                 break
-
     # mosaic
     log.info("Starting to mosaic las files...")
     las_fps = glob(join(in_dir, '*.laz'))
@@ -263,9 +262,9 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
         return -1
-
     # Allowing the code to use user input DEM
     dem_fp = join(results_dir, 'dem.tif')
+
     if not user_dem:
         log.info("Starting DEM download...")
         _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp, cache_fp= join(results_dir, 'py3dep_cache', 'aiohttp_cache.sqlite'))
@@ -292,7 +291,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
     # DSM creation
     log.info("Creating Canopy Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = canopy_laz, \
-        outtif = None, dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
+        outtif = canopy_laz.replace('laz','tif'), dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
         json_name='canopy')
     log.debug(f"JSON to use is {json_to_use}")
 

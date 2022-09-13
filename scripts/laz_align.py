@@ -12,7 +12,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, ice_dir, final_tif):
+def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif):
         # Clip clean_PC to the transform_area using PDAL
         # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
         clipped_pc = join(result_dir, 'clipped_PC.laz')
@@ -39,19 +39,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
         with open(json_path,'w') as outfile:
             json.dump(json_pipeline, outfile, indent = 2)
 
-        # If does exist give user option to clip lidar
-        if exists(clipped_pc): 
-            done = False
-            while not done:
-                ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
-                if ans.lower() == 'n':
-                    done = True
-                elif ans.lower() == 'y':
-                    cl_call(f'pdal pipeline {json_path}', log) 
-                    done = True
-        # If does not exist - make clipped lidar
-        else:
-            cl_call(f'pdal pipeline {json_path}', log)               
+        cl_call(f'pdal pipeline {json_path}', log)               
 
         # Check to see if output clipped point cloud was created
         if not exists(clipped_pc):
@@ -159,12 +147,12 @@ def laz_align(in_dir,
     gdf.to_file(buff_shp)
 
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
-         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-            ice_dir=ice_dir, final_tif = join(ice_dir, basename(in_dir)+'snow.tif'))    
+        json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
+        final_tif = join(ice_dir, basename(in_dir)+'snow.tif'))    
 
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
-         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-            ice_dir=ice_dir, final_tif = join(ice_dir, basename(in_dir)+'canopy.tif')) 
+        json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
+        final_tif = join(ice_dir, basename(in_dir)+'canopy.tif')) 
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif):

@@ -9,6 +9,7 @@ Options:
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
     -s shp_fp        Shapefile to align with
+    -g geoid         Is the reference DEM in geoid
 """
 
 from docopt import docopt
@@ -34,10 +35,15 @@ if __name__ == '__main__':
     user_dem = args.get('-e')
     if user_dem:
         user_dem = abspath(user_dem)
+    geoid = args.get('-g')
+    if not user_dem:
+        geoid = True
     debug = args.get('-d')
     asp_dir = args.get('-a')
     if asp_dir:
         asp_dir = abspath(asp_dir)
+        if basename(asp_dir) != 'bin':
+            asp_dir = join(asp_dir, 'bin')
     else:
         asp_dir = abspath(join('ASP', 'bin'))
     shp_fp = args.get('-s')
@@ -90,8 +96,8 @@ if __name__ == '__main__':
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
-    aligned_tif = laz_align(work_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
-         log = log, input_laz = outlas, canopy_laz = canopy_laz)
+    aligned_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
+         log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid)
     if aligned_tif == -1:
         raise Exception('Failed to align to shapefile.')
     

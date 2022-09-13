@@ -1,8 +1,10 @@
 # Import libraries
 import os
+import re
 import sys
 from os.path import exists, join, basename, dirname, abspath, isdir
 import glob
+from unittest import result
 import geopandas as gpd
 from laz2dem import iceroad_logging, cl_call
 import json
@@ -10,8 +12,111 @@ import logging
 
 log = logging.getLogger(__name__)
 
+def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, ice_dir, final_tif):
+        # Clip clean_PC to the transform_area using PDAL
+        # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
+        clipped_pc = join(result_dir, 'clipped_PC.laz')
+        json_path = join(json_dir, 'clip_to_shp.json')
+
+        # Create .json file for PDAL clip
+        json_pipeline = {
+            "pipeline": [
+                input_laz,
+                {
+                    "type":"filters.overlay",
+                    "dimension":"Classification",
+                    "datasource":buff_shp,
+                    "layer":"buffered_area",
+                    "column":"CLS"
+                },
+                {
+                    "type":"filters.range",
+                    "limits":"Classification[42:42]"
+                },
+                clipped_pc
+            ]
+        }
+        with open(json_path,'w') as outfile:
+            json.dump(json_pipeline, outfile, indent = 2)
+
+        # If does exist give user option to clip lidar
+        if exists(clipped_pc): 
+            done = False
+            while not done:
+                ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
+                if ans.lower() == 'n':
+                    done = True
+                elif ans.lower() == 'y':
+                    cl_call(f'pdal pipeline {json_path}', log) 
+                    done = True
+        # If does not exist - make clipped lidar
+        else:
+            cl_call(f'pdal pipeline {json_path}', log)               
+
+        # Check to see if output clipped point cloud was created
+        if not exists(clipped_pc):
+            log.info('Output point cloud not created')
+            return -1
+
+        log.info('Point cloud clipped to area')
+
+        # Define paths for next if statement
+        in_dem = join(result_dir, 'dem.tif')
+        ref_dem = join(result_dir, 'ref_PC.tif')
+        
+        if dem_is_geoid is True:
+            # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
+            nad83_dem = join(result_dir, 'demNAD_tmp.tif')
+            gdal_func = join(asp_dir, 'gdalwarp')
+            cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
+            # Use ASP to convert from geoid to ellipsoid
+            ellisoid_dem = join(result_dir, 'dem_wgs')
+            geoid_func = join(asp_dir, 'dem_geoid')
+            cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
+                    --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
+            # Set it back to WGS84
+            cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
+
+            # check for success
+            if not exists(ref_dem):
+                log.info('Conversion to ellipsoid failed')
+                return -1
+
+            log.info('Merged DEM converted to ellipsoid per user input')
+
+        else:
+            cl_call('cp '+ in_dem +' '+ ref_dem, log)
+            log.info('Merged DEM was kept in original ellipsoid form...')
+
+        # Call ASP pc_align function on road and DEM and output translation/rotation matrix
+        pc_align_func = join(asp_dir, 'pc_align')
+        align_pc = join(result_dir,'pc-align','run')
+        log.info('Beginning pc_align function...')
+        cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                    {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to somwthing better
+        
+        # Apply transformation matrix to the entire laz and output points
+        # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
+        transform_pc = final_tif.replace('.tif','.laz')
+        cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                    --initial-transform {align_pc}-transform.txt \
+                    --save-transformed-source-points                            \
+                    {ref_dem} {input_laz}   \
+                    -o {transform_pc}', log)
+
+        # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
+        point2dem_func = join(asp_dir, 'point2dem')
+        # final_tif = join(ice_dir, 'pc-grid', 'run')
+        cl_call(f'{point2dem_func} {transform_pc} \
+                    --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
+    
+        return final_tif
+
 # Find transformations/rotations via iceyroads and apply to whole point cloud
-def laz_align(work_dir, 
+def laz_align(in_dir, 
+            log,
+            input_laz,
+            canopy_laz,
             align_shp = 'transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
@@ -29,8 +134,11 @@ def laz_align(work_dir,
     Returns:
     final_tif (str): filepath to output corrected point cloud
     '''
-    work_dir = abspath(work_dir)
-    assert isdir(work_dir), 'work_dir must be directory'
+    in_dir = abspath(in_dir)
+    assert isdir(in_dir), 'in_dir must be directory'
+    ice_dir = join(in_dir, 'ice-road')
+    result_dir = join(ice_dir, 'results')
+    json_dir = join(ice_dir,'jsons')
 
     # log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='asp_align')
     log.info('Starting ASP align')
@@ -47,117 +155,23 @@ def laz_align(work_dir,
     gdf['CLS'] = 42
 
     # Save buffered shpfile to directory we just made
-    buff_shp = join(work_dir, 'buffered_area.shp')
+    buff_shp = join(result_dir, 'buffered_area.shp')
     gdf.to_file(buff_shp)
 
-    # Clip clean_PC to the transform_area using PDAL
-    input_laz = join(work_dir, basename(dirname(work_dir))+'.laz')
-    clipped_pc = join(work_dir, 'clipped_PC.laz')
-    json_path = join(work_dir, 'clip.json')
+    snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
+         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
+            ice_dir=ice_dir, final_tif = join(ice_dir, basename(in_dir)+'snow.tif'))    
 
-    # Create .json file for PDAL clip
-    json_pipeline = {
-        "pipeline": [
-            input_laz,
-            {
-                "type":"filters.overlay",
-                "dimension":"Classification",
-                "datasource":buff_shp,
-                "layer":"buffered_area",
-                "column":"CLS"
-            },
-            {
-                "type":"filters.range",
-                "limits":"Classification[42:42]"
-            },
-            clipped_pc
-        ]
-    }
-    with open(json_path,'w') as outfile:
-        json.dump(json_pipeline, outfile, indent = 2)
-
-    # If does exist give user option to clip lidar
-    if exists(clipped_pc): 
-        done = False
-        while not done:
-            ans = input("Clipped point cloud already exists. Enter y to overwrite and n to use existing:")
-            if ans.lower() == 'n':
-                done = True
-            elif ans.lower() == 'y':
-                cl_call(f'pdal pipeline {json_path}', log) 
-                done = True
-    
-    # If does not exist - make clipped lidar
-    if not exists(clipped_pc):
-        cl_call(f'pdal pipeline {json_path}', log)  
-    else:
-        pass               
-
-    # Check to see if output clipped point cloud was created
-    if not exists(clipped_pc):
-        log.info('Output point cloud not created')
-        return -1
-
-    log.info('Point cloud clipped to area')
-
-    # Define paths for next if statement
-    in_dem = join(work_dir, 'dem.tif')
-    ref_dem = join(work_dir, 'ref_PC.tif')
-    
-    if dem_is_geoid is True:
-        # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-        nad83_dem = join(work_dir, 'demNAD_tmp.tif')
-        gdal_func = join(asp_dir, 'gdalwarp')
-        cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
-        # Use ASP to convert from geoid to ellipsoid
-        ellisoid_dem = join(work_dir, 'dem_wgs')
-        geoid_func = join(asp_dir, 'dem_geoid')
-        cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
-                   --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
-        # Set it back to WGS84
-        cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
-
-        # check for success
-        if not exists(ref_dem):
-            log.info('Conversion to ellipsoid failed')
-            return -1
-
-        log.info('Merged DEM converted to ellipsoid per user input')
-
-    else:
-        cl_call('cp '+ in_dem +' '+ ref_dem, log)
-        log.info('Merged DEM was kept in original ellipsoid form...')
-
-    # Call ASP pc_align function on road and DEM and output translation/rotation matrix
-    pc_align_func = join(asp_dir, 'pc_align')
-    align_pc = join(work_dir,'pc-align','run')
-    log.info('Beginning pc_align function...')
-    cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to somwthing better
-    
-    # Apply transformation matrix to the entire laz and output points
-    # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
-    transform_pc = join(work_dir,'pc-transform','run')
-    cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
-                --initial-transform {align_pc}-transform.txt \
-                --save-transformed-source-points                            \
-                {ref_dem} {input_laz}   \
-                -o {transform_pc}', log)
-
-    # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
-    point2dem_func = join(asp_dir, 'point2dem')
-    final_tif = join(work_dir, 'pc-grid', 'run')
-    cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
-                --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
+    canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
+         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
+            ice_dir=ice_dir, final_tif = join(ice_dir, basename(in_dir)+'canopy.tif')) 
 
     # For some reason this is returning 1 when a product IS created..
-    # if not exists(final_tif):
-    #    log.info('No final product created')
-    #    return -1
+    if not exists(snow_tif):
+       log.info('No final product created')
+       return -1
 
-
-    return final_tif
-
+    return snow_tif
 
 if __name__ == '__main__':
     laz_align('/Users/brent/Documents/MCS/mcs0407/results')

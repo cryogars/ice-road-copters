@@ -50,7 +50,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
         # Define paths for next if statement
         in_dem = join(result_dir, 'dem.tif')
-        ref_dem = join(result_dir, 'ref_PC.tif')
+        ref_dem = join(result_dir, 'ref_DEM.tif')
         
         if dem_is_geoid is True:
             # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
@@ -81,7 +81,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
         align_pc = join(result_dir,'pc-align','run')
         log.info('Beginning pc_align function...')
         cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                    {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to somwthing better
+                    {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to something better
         
         # Apply transformation matrix to the entire laz and output points
         # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ

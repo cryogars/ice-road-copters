@@ -18,7 +18,7 @@ from the ice-road-copters directory for example one can run:
 ```
 $ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to>
 ```
-NOTE: that this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid or you are using py3dep functionality, you must change `dem_is_geoid=False` to `dem_is_geoid=True`.
+NOTE: that this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid you must change `dem_is_geoid=False` to `dem_is_geoid=True`.
 
 #### Flags
 
@@ -27,7 +27,7 @@ NOTE: that this code assumes you are using a reference DEM (and heli lidar data)
 -d debug         turns on debugging logging [Options: True or False]
 -a asp_dir       Directory with ASP binary files [Can be either ASP or ASP/bin directory]
 -s shp_fp        Shapefile to align with [road shapefile to use to tie reference DEM to your point cloud]
--g geoid         Is the reference DEM in geoid? [Default: False]
+-g geoid         Is the reference DEM in geoid? Will be auto set to True if you don't supply a DEM [Default: False]
 ```
 
 

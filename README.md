@@ -27,6 +27,7 @@ NOTE: that this code assumes you are using a reference DEM (and heli lidar data)
 -d debug         turns on debugging logging [Options: True or False]
 -a asp_dir       Directory with ASP binary files [Can be either ASP or ASP/bin directory]
 -s shp_fp        Shapefile to align with [road shapefile to use to tie reference DEM to your point cloud]
+-g geoid         Is the reference DEM in geoid? [Default: False]
 ```
 
 

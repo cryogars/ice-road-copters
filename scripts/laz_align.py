@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(work_dir, 
-            align_shp = '/Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
+            align_shp = 'transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
             asp_dir = None):
@@ -29,8 +29,6 @@ def laz_align(work_dir,
     Returns:
     final_tif (str): filepath to output corrected point cloud
     '''
-    if not asp_dir:
-        asp_dir = abspath(join(dirname(dirname(work_dir)), 'ASP', 'bin'))
     work_dir = abspath(work_dir)
     assert isdir(work_dir), 'work_dir must be directory'
 
@@ -39,6 +37,7 @@ def laz_align(work_dir,
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same
     # Read in transform area (ice roads)
+    log.info(f'Loading in shapefile {align_shp}')
     gdf = gpd.read_file(align_shp)
 
     # Buffer geom based on user input

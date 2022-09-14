@@ -12,6 +12,7 @@ Options:
     -g geoid         Is the reference DEM in geoid
 """
 
+from cmath import exp
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
@@ -59,6 +60,8 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
+    if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
+        raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
     # setup our directory structure
     ice_dir = join(in_dir, 'ice-road')
     os.makedirs(ice_dir, exist_ok= True)

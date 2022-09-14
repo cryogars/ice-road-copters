@@ -60,8 +60,6 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
-        raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
     # setup our directory structure
     ice_dir = join(in_dir, 'ice-road')
     os.makedirs(ice_dir, exist_ok= True)
@@ -92,6 +90,12 @@ if __name__ == '__main__':
     log = logging.getLogger(__name__)
     if debug:
         log.setLevel(logging.DEBUG)  
+
+    # check for white spaces
+    if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
+        log.warn('White spaces found in file paths. Try and remove them?')
+        replace_white_spaces(in_dir)
+        # raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
 
     # run main functions
     log.info('Starting laz2uncorrectedDEM')

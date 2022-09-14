@@ -43,8 +43,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
         # Check to see if output clipped point cloud was created
         if not exists(clipped_pc):
-            log.info('Output point cloud not created')
-            return -1
+            raise Exception('Output point cloud not created')
 
         log.info('Point cloud clipped to area')
 
@@ -67,8 +66,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
             # check for success
             if not exists(ref_dem):
-                log.info('Conversion to ellipsoid failed')
-                return -1
+                raise Exception('Conversion to ellipsoid failed')
 
             log.info('Merged DEM converted to ellipsoid per user input')
 
@@ -152,11 +150,11 @@ def laz_align(in_dir,
 
     snow_final_tif = join(ice_dir, basename(in_dir)+'-snow')
     canopy_final_tif = join(ice_dir, basename(in_dir)+'-snow')
-    if exists(snow_final_tif + '-DEM.tif'):
+    if exists(snow_final_tif) and exists(canopy_final_tif):
         while True:
             ans = input("Aligned tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                return snow_final_tif + '-DEM.tif', canopy_final_tif + '-DEM.tif'
+                return snow_final_tif, canopy_final_tif
             elif ans.lower() == 'y':
                 break
         
@@ -170,8 +168,8 @@ def laz_align(in_dir,
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif + '-DEM.tif'):
-       log.info('No final product created')
-       return -1
+       log.info(f'Can not find {snow_tif}-DEM.tif')
+       raise Exception('No final product created')
 
     return snow_tif, canopy_tif
 

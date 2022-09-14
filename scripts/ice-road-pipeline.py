@@ -96,12 +96,17 @@ if __name__ == '__main__':
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
-    tifs = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
+    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
          log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid)
-    if tifs == -1:
-        raise Exception('Failed to align to shapefile.')
     
-    snow_tif, canopy_tif = tifs
+    # clean up after ASP a bit
+    for fp in os.listdir(ice_dir):
+        if fp.endswith(".txt"):
+            os.remove(join(ice_dir, fp))
+    #     if fp.endswith('-DEM.tif'):
+    #         os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
+    # snow_tif = snow_tif.replace('-DEM','')
+    # canopy_tif = canopy_tif.replace('-DEM','')
     
     # difference two rasters to find snow depth
     ref_dem_path = join(results_dir, 'dem.tif')

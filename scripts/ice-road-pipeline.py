@@ -96,20 +96,29 @@ if __name__ == '__main__':
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
-    aligned_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
+    tifs = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
          log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid)
-    if aligned_tif == -1:
+    if tifs == -1:
         raise Exception('Failed to align to shapefile.')
     
+    snow_tif, canopy_tif = tifs
+    
     # difference two rasters to find snow depth
-    ref_dem_path = join(in_dir, 'results/ref_PC.tif')
-    snow_dem_path = join(in_dir, 'results/pc-grid/run-DEM.tif')
-    snow_depth_path = join(in_dir, 'results/snowdepth.tif')
+    ref_dem_path = join(results_dir, 'dem.tif')
+    snow_depth_path = join(ice_dir, f'{basename(in_dir)}-snowdepth.tif')
     snowoff = rio.open_rasterio(ref_dem_path, masked=True)
-    snowon = rio.open_rasterio(snow_dem_path, masked=True) 
+    snowon = rio.open_rasterio(snow_tif, masked=True) 
     snowon_matched = snowon.rio.reproject_match(snowoff)
     snowdepth = snowon_matched - snowoff
     snowdepth.rio.to_raster(snow_depth_path)
+
+    # difference two rasters to find snow depth
+    ref_dem_path = join(results_dir, 'dem.tif')
+    canopy_fp = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
+    canopy = rio.open_rasterio(canopy_tif, masked=True) 
+    matched = canopy.rio.reproject_match(snowoff)
+    canopyheight = matched - snowoff
+    canopyheight.rio.to_raster(canopy_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

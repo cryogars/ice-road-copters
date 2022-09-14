@@ -169,7 +169,7 @@ def laz_align(in_dir,
         final_tif = canopy_final_tif)
 
     # For some reason this is returning 1 when a product IS created..
-    if not exists(snow_tif):
+    if not exists(snow_tif + '-DEM.tif'):
        log.info('No final product created')
        return -1
 

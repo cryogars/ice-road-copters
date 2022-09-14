@@ -51,6 +51,8 @@ if __name__ == '__main__':
         shp_fp = abspath(shp_fp)
         if isdir(shp_fp):
             raise Exception("Provide to .shp file to use. Not directory.")
+        elif not shp_fp.endswith('.shp'):
+            raise Exception("Provide fp to .shp file to use.")
     else:
         raise Exception("Provide filepath to .shp file for alignment with -s flag.")
 

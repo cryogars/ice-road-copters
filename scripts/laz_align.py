@@ -149,12 +149,12 @@ def laz_align(in_dir,
     # os.makedirs(asp_dir, exist_ok= True)
 
     snow_final_tif = join(ice_dir, basename(in_dir)+'-snow')
-    canopy_final_tif = join(ice_dir, basename(in_dir)+'-snow')
-    if exists(snow_final_tif) and exists(canopy_final_tif):
+    canopy_final_tif = join(ice_dir, basename(in_dir)+'-canopy')
+    if exists(snow_final_tif + '.tif') and exists(canopy_final_tif + '.tif'):
         while True:
             ans = input("Aligned tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                return snow_final_tif, canopy_final_tif
+                return snow_final_tif + '.tif', canopy_final_tif+ '.tif'
             elif ans.lower() == 'y':
                 break
         
@@ -167,8 +167,8 @@ def laz_align(in_dir,
         final_tif = canopy_final_tif)
 
     # For some reason this is returning 1 when a product IS created..
-    if not exists(snow_tif + '-DEM.tif'):
-       log.info(f'Can not find {snow_tif}-DEM.tif')
+    if not exists(snow_tif):
+       log.info(f'Can not find {snow_tif}')
        raise Exception('No final product created')
 
     return snow_tif, canopy_tif

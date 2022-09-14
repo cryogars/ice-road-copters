@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     # check for white spaces
     if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
-        log.warn('White spaces found in file paths. Try and remove them?')
+        log.warning('White spaces found in file paths. Try and remove them?')
         replace_white_spaces(in_dir)
         # raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
 

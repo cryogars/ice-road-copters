@@ -12,6 +12,7 @@ Options:
     -g geoid         Is the reference DEM in geoid
 """
 
+from cmath import exp
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
@@ -51,6 +52,8 @@ if __name__ == '__main__':
         shp_fp = abspath(shp_fp)
         if isdir(shp_fp):
             raise Exception("Provide to .shp file to use. Not directory.")
+        elif not shp_fp.endswith('.shp'):
+            raise Exception("Provide fp to .shp file to use.")
     else:
         raise Exception("Provide filepath to .shp file for alignment with -s flag.")
 
@@ -88,6 +91,12 @@ if __name__ == '__main__':
     if debug:
         log.setLevel(logging.DEBUG)  
 
+    # check for white spaces
+    if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
+        log.warn('White spaces found in file paths. Try and remove them?')
+        replace_white_spaces(in_dir)
+        # raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
+
     # run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
@@ -96,20 +105,34 @@ if __name__ == '__main__':
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
-    aligned_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
+    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
          log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid)
-    if aligned_tif == -1:
-        raise Exception('Failed to align to shapefile.')
+    
+    # clean up after ASP a bit
+    for fp in os.listdir(ice_dir):
+        if fp.endswith(".txt"):
+            os.remove(join(ice_dir, fp))
+        if fp.endswith('-DEM.tif'):
+            os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
+    snow_tif = snow_tif.replace('-DEM','')
+    canopy_tif = canopy_tif.replace('-DEM','')
     
     # difference two rasters to find snow depth
-    ref_dem_path = join(in_dir, 'results/ref_PC.tif')
-    snow_dem_path = join(in_dir, 'results/pc-grid/run-DEM.tif')
-    snow_depth_path = join(in_dir, 'results/snowdepth.tif')
+    ref_dem_path = join(results_dir, 'dem.tif')
+    snow_depth_path = join(ice_dir, f'{basename(in_dir)}-snowdepth.tif')
     snowoff = rio.open_rasterio(ref_dem_path, masked=True)
-    snowon = rio.open_rasterio(snow_dem_path, masked=True) 
+    snowon = rio.open_rasterio(snow_tif, masked=True) 
     snowon_matched = snowon.rio.reproject_match(snowoff)
     snowdepth = snowon_matched - snowoff
     snowdepth.rio.to_raster(snow_depth_path)
+
+    # difference two rasters to find snow depth
+    ref_dem_path = join(results_dir, 'dem.tif')
+    canopy_fp = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
+    canopy = rio.open_rasterio(canopy_tif, masked=True) 
+    matched = canopy.rio.reproject_match(snowoff)
+    canopyheight = matched - snowoff
+    canopyheight.rio.to_raster(canopy_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

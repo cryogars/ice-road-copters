@@ -27,6 +27,7 @@ do
         echo $DC_CMD
         $($DC_CMD)
     fi
+    echo $?
     $(cp -r $SCRATCH/$FP/ice-road $D2021/$FP)
     $(rm -r $SCRATCH/$FP)
 done
@@ -47,6 +48,7 @@ do
         echo $DC_CMD
         $($DC_CMD)
     fi
+    echo $?
     $(cp -r $SCRATCH/$FP/ice-road $D2022/$FP/)
     $(rm -r $SCRATCH/$FP)
 done

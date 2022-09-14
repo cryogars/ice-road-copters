@@ -103,10 +103,10 @@ if __name__ == '__main__':
     for fp in os.listdir(ice_dir):
         if fp.endswith(".txt"):
             os.remove(join(ice_dir, fp))
-    #     if fp.endswith('-DEM.tif'):
-    #         os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
-    # snow_tif = snow_tif.replace('-DEM','')
-    # canopy_tif = canopy_tif.replace('-DEM','')
+        if fp.endswith('-DEM.tif'):
+            os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
+    snow_tif = snow_tif.replace('-DEM','')
+    canopy_tif = canopy_tif.replace('-DEM','')
     
     # difference two rasters to find snow depth
     ref_dem_path = join(results_dir, 'dem.tif')

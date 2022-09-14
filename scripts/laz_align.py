@@ -79,14 +79,14 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
         # Call ASP pc_align function on road and DEM and output translation/rotation matrix
         pc_align_func = join(asp_dir, 'pc_align')
-        align_pc = join(result_dir,'pc-align','run')
+        align_pc = join(result_dir,'pc-align',basename(final_tif))
         log.info('Beginning pc_align function...')
         cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
                     {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to something better
         
         # Apply transformation matrix to the entire laz and output points
         # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
-        transform_pc = final_tif.replace('.tif','.laz')
+        transform_pc = join(result_dir,'pc-transform',basename(final_tif))
         cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
                     --initial-transform {align_pc}-transform.txt \
                     --save-transformed-source-points                            \
@@ -96,10 +96,10 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
         # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
         point2dem_func = join(asp_dir, 'point2dem')
         # final_tif = join(ice_dir, 'pc-grid', 'run')
-        cl_call(f'{point2dem_func} {transform_pc} \
+        cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
                     --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
     
-        return final_tif
+        return final_tif + '-DEM.tif'
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(in_dir, 
@@ -147,20 +147,33 @@ def laz_align(in_dir,
     buff_shp = join(result_dir, 'buffered_area.shp')
     gdf.to_file(buff_shp)
 
+    # asp_dir = join(result_dir, 'asp')
+    # os.makedirs(asp_dir, exist_ok= True)
+
+    snow_final_tif = join(ice_dir, basename(in_dir)+'-snow')
+    canopy_final_tif = join(ice_dir, basename(in_dir)+'-snow')
+    if exists(snow_final_tif + '-DEM.tif'):
+        while True:
+            ans = input("Aligned tif already exists. Enter y to overwrite and n to use existing:")
+            if ans.lower() == 'n':
+                return snow_final_tif + '-DEM.tif', canopy_final_tif + '-DEM.tif'
+            elif ans.lower() == 'y':
+                break
+        
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = join(ice_dir, basename(in_dir)+'snow.tif'))    
+        final_tif = snow_final_tif)
 
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = join(ice_dir, basename(in_dir)+'canopy.tif')) 
+        final_tif = canopy_final_tif)
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif):
        log.info('No final product created')
        return -1
 
-    return snow_tif
+    return snow_tif, canopy_tif
 
 if __name__ == '__main__':
     laz_align('/Users/brent/Documents/MCS/mcs0407/results')

@@ -18,7 +18,7 @@ from the ice-road-copters directory for example one can run:
 ```
 $ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to>
 ```
-NOTE: that this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid you must set the `-g  True` flag.
+NOTE: this code assumes you are using a reference DEM (and heli lidar data) in ellipsoid. If your reference DEM is in Geoid you must set the `-g  True` flag. Also, this code is assuming you would like a buffer of 2.5 meters on either side of the centerline of the road (see buffer_meter variable in laz_align.py). TODO: turn this buffer_meter variable into a flag as well.
 
 #### Flags
 

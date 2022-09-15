@@ -13,6 +13,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime
 from glob import glob
 from os.path import abspath, basename, dirname, exists, isdir, join, expanduser
@@ -57,7 +58,7 @@ def cl_call(command, log):
                 log.info(output.strip())
             break
 
-def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2dem', json_dir = './jsons'):
+def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned', json_dir = './jsons', canopy = False):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
     Filters include: dem, elm, outlier
@@ -128,8 +129,16 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2dem', j
             "resolution":1.0,
             "output_type":"idw"
     }
+
+    first_returns = {"type": "filters.range",\
+            "limits":"returnnumber[1:1]"
+    }
+
     # set up pipeline
-    pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
+    if canopy:
+        pipeline = [reader, first_returns, las_writer]
+    else:
+        pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
     os.makedirs(json_dir, exist_ok= True)
@@ -142,7 +151,7 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2dem', j
 
     return json_to_use
 
-def mosaic_laz(in_dir, log, out_fp = 'merge.laz', laz_prefix = ''):
+def mosaic_laz(in_dir, log, out_fp = 'unaligned_merged.laz', laz_prefix = ''):
     """
     Generates and run PDAL mosaic command.
 
@@ -167,7 +176,7 @@ def mosaic_laz(in_dir, log, out_fp = 'merge.laz', laz_prefix = ''):
     
     return mosaic_fp
 
-def download_dem(las_fp, dem_fp = 'dem.tif'):
+def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sqlite'):
     """
     Reads the crs and bounds of a las file and downloads a DEM from py3dep
     Must be in the CONUS.
@@ -192,6 +201,8 @@ def download_dem(las_fp, dem_fp = 'dem.tif'):
     utm_bounds = box(hdr.mins[0], hdr.mins[1], hdr.maxs[0], hdr.maxs[1])
     wgs84_bounds = transform(project, utm_bounds)
     # download dem inside bounds
+    os.environ["HYRIVER_CACHE_NAME"] = cache_fp
+    
     dem_wgs = py3dep.get_map('DEM', wgs84_bounds, resolution=1, crs='EPSG:4326')
     log.debug(f"DEM bounds: {dem_wgs.rio.bounds()}. Size: {dem_wgs.size}")
     # reproject to las crs and save
@@ -223,36 +234,40 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
     os.chdir(in_dir)
 
     # set up sub directories
-    results_dir = join(in_dir, 'results')
+    ice_dir = join(in_dir, 'ice-road')
+    os.makedirs(ice_dir, exist_ok= True)
+    results_dir = join(ice_dir, 'results')
     os.makedirs(results_dir, exist_ok= True)
+    json_dir =  join(ice_dir, 'jsons')
+    os.makedirs(json_dir, exist_ok= True)
 
     # check for overwrite
-    outtif = join(results_dir, f'{basename(in_dir)}.tif')
-    outlas = join(results_dir, f'{basename(in_dir)}.laz')
+    outtif = join(results_dir, f'{basename(in_dir)}_unaligned.tif')
+    outlas = join(results_dir, f'{basename(in_dir)}_unaligned.laz')
+    canopy_laz = join(results_dir, f'{basename(in_dir)}_canopy_unaligned.laz')
     if exists(outtif):
         while True:
             ans = input("Uncorrected tif already exists. Enter y to overwrite and n to use existing:")
             if ans.lower() == 'n':
-                return outtif, outlas
+                return outtif, outlas, canopy_laz
             elif ans.lower() == 'y':
                 break
-
     # mosaic
     log.info("Starting to mosaic las files...")
     las_fps = glob(join(in_dir, '*.laz'))
     log.debug(f"Number of las files: {len(las_fps)}")
-    mosaic_fp = join(results_dir, 'merge.laz')
+    mosaic_fp = join(results_dir, 'unfiltered_merge.laz')
     mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp, log = log)
 
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
         return -1
-
     # Allowing the code to use user input DEM
     dem_fp = join(results_dir, 'dem.tif')
-    if user_dem is False:
+
+    if not user_dem:
         log.info("Starting DEM download...")
-        _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp )
+        _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp, cache_fp= join(results_dir, 'py3dep_cache', 'aiohttp_cache.sqlite'))
         log.debug(f"Downloaded dem to {dem_fp}")
     else:
         log.info("User DEM specified. Skipping DEM download...")
@@ -261,21 +276,37 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
         log.warning('No DEM downloaded')
         return -1
 
-    log.info("Creating PDAL Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp)
+    # DTM creation
+    log.info("Creating DTM Pipeline...")
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp, json_dir = json_dir)
     log.debug(f"JSON to use is {json_to_use}")
 
-    log.info("Running PDAL pipeline")
+    log.info("Running DTM pipeline")
     if debug:
         pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
     else:
         pipeline_cmd = f'pdal pipeline -i {json_to_use}'
     cl_call(pipeline_cmd, log)
 
+    # DSM creation
+    log.info("Creating Canopy Pipeline...")
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = canopy_laz, \
+        outtif = canopy_laz.replace('laz','tif'), dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
+        json_name='canopy')
+    log.debug(f"JSON to use is {json_to_use}")
+
+    log.info("Running Canopy pipeline")
+    if debug:
+        pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
+    else:
+        pipeline_cmd = f'pdal pipeline -i {json_to_use}'
+    cl_call(pipeline_cmd, log)
+
+
     # end_time = datetime.now()
     # log.info(f"Completed! Run Time: {end_time - start_time}")
 
-    return outtif, outlas
+    return outtif, outlas, canopy_laz
 
 def iceroad_logging(log_dir, debug, log_prefix = 'las2uncorrectedDEM' ):
     os.makedirs(log_dir, exist_ok= True)

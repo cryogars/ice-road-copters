@@ -11,6 +11,9 @@ ICEROAD='/home/zacharykeskinen/ice-road-copters/scripts/ice-road-pipeline.py'
 D2021='/SNOWDATA/IDALS/2021'
 D2022='/SNOWDATA/IDALS/2022'
 SCRATCH='/home/zacharykeskinen/scratch'
+
+$(conda activate iceroad)
+
 echo "Starting 2021 Flights..."
 
 for FP in $(ls $D2021)

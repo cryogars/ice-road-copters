@@ -1,16 +1,19 @@
 #!/bin/bash
 
+echo -n "Enter Kelvin username: " 
+read username
+
 ASP_DIR='/SNOWDATA/IDALS/ASP/bin/'
-MCS_SHP='/home/zacharykeskinen/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v3.shp'
-DC_SHP='/home/zacharykeskinen/ice-road-copters/transform_area/bogus_basin/Roads_DryCreek_v3.shp'
+MCS_SHP="/home/$username/ice-road-copters/transform_area/hwy_21/hwy_21_utm_edit_v3.shp"
+DC_SHP="/home/$username/ice-road-copters/transform_area/bogus_basin/Roads_DryCreek_v3.shp"
 MCS_DEM='/SNOWDATA/IDALS/REF_DEM/MCS_REFDEM_WGS84.tif'
 DC_DEM='/SNOWDATA/IDALS/REF_DEM/DC_REFDEM_WGS84.tif'
 
-ICEROAD='/home/zacharykeskinen/ice-road-copters/scripts/ice-road-pipeline.py'
+ICEROAD="/home/$username/ice-road-copters/scripts/ice-road-pipeline.py"
 
 D2021='/SNOWDATA/IDALS/2021'
 D2022='/SNOWDATA/IDALS/2022'
-SCRATCH='/home/zacharykeskinen/scratch'
+SCRATCH="/home/$username/scratch"
 
 $(conda activate iceroad)
 

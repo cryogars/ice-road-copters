@@ -1,0 +1,49 @@
+#!/bin/bash
+
+echo -n "Enter Kelvin username: " 
+read username
+
+ASP_DIR='/SNOWDATA/IDALS/ASP/bin/'
+MCS_SHP="/home/$username/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp"
+DC_SHP="/home/$username/ice-road-copters/transform_area/bogus_basin/Roads_DryCreek_v3.shp"
+MCS_DEM='/SNOWDATA/IDALS/REF_DEM/MCS_REFDEM_WGS84.tif'
+DC_DEM='/SNOWDATA/IDALS/REF_DEM/DC_REFDEM_WGS84.tif'
+
+ICEROAD="/home/$username/ice-road-copters/scripts/ice-road-pipeline.py"
+
+D2021='/SNOWDATA/IDALS/2021'
+D2022='/SNOWDATA/IDALS/2022'
+SCRATCH="/home/$username/scratch"
+
+$(conda activate iceroad)
+
+echo "Starting 2021 Flights..."
+
+for FP in $(ls $D2021)
+do
+    if [[ $FP == *"MCS"* ]]; then
+    	$(cp -r $D2021/$FP $SCRATCH)
+    	$(rm -r $SCRATCH/$FP/ice-road)
+        MCS_CMD="python $ICEROAD $SCRATCH/$FP -e $MCS_DEM -s $MCS_SHP -a $ASP_DIR"
+        echo $MCS_CMD
+        $($MCS_CMD)
+    	$(cp -r $SCRATCH/$FP/ice-road $D2021/$FP)
+    	$(rm -r $SCRATCH/$FP)
+    fi
+done
+
+echo "Starting 2022 Flights..."
+
+for FP in $(ls $D2022)
+do
+    if [[ $FP == *"MCS"* ]]; then
+    $(cp -r $D2022/$FP $SCRATCH)
+    $(rm -r $SCRATCH/$FP/ice-road)
+        MCS_CMD="python $ICEROAD $SCRATCH/$FP -e $MCS_DEM -s $MCS_SHP -a $ASP_DIR"
+        echo $MCS_CMD
+        $($MCS_CMD)
+    echo $?
+    $(cp -r $SCRATCH/$FP/ice-road $D2022/$FP/)
+    $(rm -r $SCRATCH/$FP)
+    fi
+done

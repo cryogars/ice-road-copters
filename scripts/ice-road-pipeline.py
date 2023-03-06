@@ -132,6 +132,10 @@ if __name__ == '__main__':
     canopy = rio.open_rasterio(canopy_tif, masked=True) 
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
+    # mask snow depth from vegetation
+    canopyheight = canopyheight.where(canopyheight > snowon + 0.1)
+    # might not need this but good to make sure masking didn't add anything weird to the nans
+    canopyheight = canopyheight.where(~snowon.isnull())
     canopyheight.rio.to_raster(canopy_fp)
 
     end_time = datetime.now()

@@ -133,10 +133,6 @@ if __name__ == '__main__':
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
     # mask snow depth from vegetation
-    canopyheight = canopyheight.where(canopyheight > snowon + 0.1)
-    # ensure masking didn't add anything strange to the nans
-    canopyheight = canopyheight.where(~snowon.isnull())
-    canopyheight.rio.to_raster(canopy_fp)
-
+    canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

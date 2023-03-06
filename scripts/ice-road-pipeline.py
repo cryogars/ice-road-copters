@@ -126,7 +126,7 @@ if __name__ == '__main__':
     snowdepth = snowon_matched - snowoff
     snowdepth.rio.to_raster(snow_depth_path)
 
-    # difference two rasters to find snow depth
+    # difference two rasters to find canopy height
     ref_dem_path = join(results_dir, 'dem.tif')
     canopy_fp = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
     canopy = rio.open_rasterio(canopy_tif, masked=True) 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     canopyheight = matched - snowoff
     # mask snow depth from vegetation
     canopyheight = canopyheight.where(canopyheight > snowon + 0.1)
-    # might not need this but good to make sure masking didn't add anything weird to the nans
+    # ensure masking didn't add anything strange to the nans
     canopyheight = canopyheight.where(~snowon.isnull())
     canopyheight.rio.to_raster(canopy_fp)
 

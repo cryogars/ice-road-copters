@@ -6,8 +6,6 @@ authors:
     orcid: "https://orcid.org/0000-0003-0916-7774"
   - family-names: "Wilder"
     given-names: "Brent"
-  - family-names: "Adebisi"
-    given-names: "Naheem"
 title: "ice-road-copters"
 version: 1.0.0
 doi: 10.5281/zenodo.8184592

@@ -1,0 +1,15 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Hoppinen"
+    given-names: "Zachary"
+    orcid: "https://orcid.org/0000-0003-0916-7774"
+  - family-names: "Wilder"
+    given-names: "Brent"
+  - family-names: "Adebisi"
+    given-names: "Naheem"
+title: "ice-road-copters"
+version: 1.0.0
+doi: 10.5281/zenodo.8184592
+date-released: 2023-05-01
+url: "https://github.com/SnowEx/ice-road-copters"

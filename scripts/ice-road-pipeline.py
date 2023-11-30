@@ -2,7 +2,7 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] [-c cal_las]  
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -15,6 +15,7 @@ Options:
                      "Intensity as Reflectance" returned by RIEGL.
     -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
     -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+    -k known_rfl     Known intrinsic reflectance (float/real) for target identified in shp_fp_rfl.
 
 """
 
@@ -82,9 +83,13 @@ if __name__ == '__main__':
     if cal_las:
         cal_las = abspath(cal_las)
 
+    known_rfl = args.get('-k')
+
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
+    
+    
     # setup our directory structure
     ice_dir = join(in_dir, 'ice-road')
     os.makedirs(ice_dir, exist_ok= True)
@@ -201,10 +206,15 @@ if __name__ == '__main__':
 
         # APPLY ASP TRANSFORM TO CAL DATA
         # RUN FUNCTION to calc road cal factor --> feeds into next function
+        output_csv = f'{results_dir}/all-calibration-rfl.csv'
         subprocess.call (["/usr/bin/Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, crs, ni_fp, nj_fp, nk_fp, road_cal_factor])
+                          cal_las, shp_fp_rfl, output_csv])
         
+        # READ IN PANDAS FILE
+        # Compute median.. and calc cal-factor...
+        road_cal_factor = ''
+
         # For each file in <in-dir> 
         for f in os.listdir(in_dir):
 

@@ -22,6 +22,7 @@ from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
+import laspy
 import rioxarray as rio
 from datetime import datetime
 import logging
@@ -145,18 +146,21 @@ if __name__ == '__main__':
     canopy = rio.open_rasterio(canopy_tif, masked=True) 
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
+    
     # mask snow depth from vegetation
     canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
-    # Are we not saving this canopy height???
-    # ??
+    canopyheight.rio.to_raster(canopy_fp)
 
-    #####
+    ##### TEMP COMMENTS #####
+    ##### START SSA CODE HERE #####
     if shp_fp_rfl:
 
         # read crs of las file # PULL 1st one here
-        with laspy.open(las_fp) as las:
+        first_path = os.listdir(shp_fp_rfl)[0]
+        with laspy.open(first_path) as las:
             hdr = las.header
             crs = hdr.parse_crs()
+        
         # create ssa / grain size rasters
         # RUN FUNCTION to save slope , aspect, normal vector (RASTERIO)
 

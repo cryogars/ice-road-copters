@@ -220,7 +220,7 @@ if __name__ == '__main__':
         # APPLY ASP TRANSFORM TO CAL DATA
         base_las = os.path.basename(cal_las)
         las_name = os.path.splitext(base_las)[0]
-        asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'snow-transform.txt')
+        asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'-snow-transform.txt')
         asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
         transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
         pdal_align_las(cal_las, transform_pc, las_name, asp_matrix, json_dir)

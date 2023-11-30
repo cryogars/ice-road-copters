@@ -10,6 +10,11 @@ Options:
     -a asp_dir       Directory with ASP binary files
     -s shp_fp        Shapefile to align with
     -g geoid         Is the reference DEM in geoid
+    -r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
+                     Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
+                     "Intensity as Reflectance" returned by RIEGL.
+    -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
+
 """
 
 from cmath import exp
@@ -56,6 +61,14 @@ if __name__ == '__main__':
             raise Exception("Provide fp to .shp file to use.")
     else:
         raise Exception("Provide filepath to .shp file for alignment with -s flag.")
+    
+    shp_fp_rfl = args.get('-r')
+    if shp_fp_rfl:
+        shp_fp_rfl = abspath(shp_fp_rfl)
+
+    imu_data = args.get('-i')
+    if imu_data:
+        imu_data = abspath(imu_data)
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -134,5 +147,18 @@ if __name__ == '__main__':
     canopyheight = matched - snowoff
     # mask snow depth from vegetation
     canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
+    # Are we not saving this canopy height???
+    # ??
+
+    #####
+    if shp_fp_rfl:
+        # create ssa / grain size rasters
+        # RUN FUNCTION to save slope , aspect, normal vector
+        # RUN FUNCTION to calc road cal factor --> feeds into next function
+        # For each file in <in-dir> RUN FUNCTION to estimate rfl and cosi
+        #   ## within this loop, estimate SSA for the raster with cleaning
+        pass
+        # END
+
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

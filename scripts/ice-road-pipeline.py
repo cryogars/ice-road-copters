@@ -24,8 +24,9 @@ from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
-import laspy
+import json
 import rioxarray as rio
+import rasterio
 from osgeo import gdal
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ import os
 
 # local imports
 from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
-from laz_align import laz_align
+from laz_align import laz_align, pdal_align_las
 from dir_space_strip import replace_white_spaces
 from las_ssa_functions import art_ssa
 
@@ -192,11 +193,10 @@ if __name__ == '__main__':
         # Displaying the parent directory of the script
         scripts_dir = os.path.dirname(__file__)
 
-        # read crs of las file # PULL 1st one here
-        first_path = os.listdir(in_dir)[0]
-        with laspy.open(first_path) as las:
-            hdr = las.header
-            crs = hdr.parse_crs()
+        # get crs
+        ref_raster = rasterio.open(snow_tif)
+        crs = ref_raster.crs    
+        ras_meta = ref_raster.profile
 
         # Compute slope and aspect from snow-on lidar
         slope_fp = join(ice_dir, f'{basename(in_dir)}-snowon_slope.tif')
@@ -220,14 +220,10 @@ if __name__ == '__main__':
         # APPLY ASP TRANSFORM TO CAL DATA
         base_las = os.path.basename(cal_las)
         las_name = os.path.splitext(base_las)[0]
-        pc_align_func = join(asp_dir, 'pc_align')
-        align_pc = join(results_dir,'pc-align',os.path.basename(in_dir))
-        transform_pc = join(ssa_dir,'pc-transform',las_name)
-        cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
-                    --initial-transform {align_pc}-snow-transform.txt \
-                    --save-transformed-source-points                            \
-                    {snow_tif} {cal_las}   \
-                    -o {transform_pc}', log)
+        asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'snow-transform.txt')
+        asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
+        transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
+        pdal_align_las(cal_las, transform_pc, las_name, asp_matrix, json_dir)
         
         # RUN FUNCTION to calc road cal factor --> feeds into next function
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
@@ -248,14 +244,10 @@ if __name__ == '__main__':
             # APPLY ASP TRANSFORM TO file in loop
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
-            pc_align_func = join(asp_dir, 'pc_align')
-            align_pc = join(results_dir,'pc-align',os.path.basename(in_dir))
-            transform_pc = join(ssa_dir,'pc-transform',las_name)
-            cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
-                        --initial-transform {align_pc}-snow-transform.txt \
-                        --save-transformed-source-points                            \
-                        {snow_tif} {f}   \
-                        -o {transform_pc}', log)
+            asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'snow-transform.txt')
+            asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
+            transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
+            pdal_align_las(f, transform_pc, las_name, asp_matrix, json_dir)
 
             # Rasterize calibrated reflectance and incidence angle
             base_las = os.path.basename(f)
@@ -276,8 +268,6 @@ if __name__ == '__main__':
             for i in range(rfl_grid.shape[0]):
                 for j in range(rfl_grid.shape[1]):
                     ssa_grid[i,j] = art_ssa(rfl_grid[i,j], cosi_grid[i,j])
-            ref_raster = rio.open(rfl_fp)
-            ras_meta = ref_raster.profile
             with rio.open(ssa_fp, 'w', **ras_meta) as dst:
                  dst.write(ssa_grid, 1)     
 

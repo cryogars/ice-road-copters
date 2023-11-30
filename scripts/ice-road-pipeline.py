@@ -153,10 +153,15 @@ if __name__ == '__main__':
     #####
     if shp_fp_rfl:
         # create ssa / grain size rasters
-        # RUN FUNCTION to save slope , aspect, normal vector
+        # RUN FUNCTION to save slope , aspect, normal vector (RASTERIO)
+
+        # APPLY ASP TRANSFORM TO CAL DATA
         # RUN FUNCTION to calc road cal factor --> feeds into next function
-        # For each file in <in-dir> RUN FUNCTION to estimate rfl and cosi
-        #   ## within this loop, estimate SSA for the raster with cleaning
+
+        # For each file in <in-dir> 
+        # APPLY ASP TRANSFORM TO file in loop
+        #   RUN FUNCTION to estimate rfl and cosi
+        #   estimate SSA for the raster with cleaning
         pass
         # END
 

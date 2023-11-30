@@ -13,9 +13,6 @@ las <- readLAS(path)
 st_crs(las) <- 32611
 print(las)
 
-# APPLY ROT/TRANS MATRIX HERE
-#HERE
-
 # MERGE INFORMATION
 x <- raster("./data/fl_230209_225728/ground_data/n_i.tif")
 y <- raster("./data/fl_230209_225728/ground_data/n_j.tif")
@@ -59,10 +56,6 @@ df <- df %>%
 # Compute median value as the calibration factor. 
 # Return csv of all points for computing histogram later
 #las = readLAS("file.las")
-
-# APPLY ROT/TRANS MATRIX HERE
-#HERE
-
 #spdf <- readOGR(dsn = "...", layer = "...")
 #clipped_las = lasclip(ctg, spdf)
 

@@ -152,6 +152,11 @@ if __name__ == '__main__':
 
     #####
     if shp_fp_rfl:
+
+        # read crs of las file # PULL 1st one here
+        with laspy.open(las_fp) as las:
+            hdr = las.header
+            crs = hdr.parse_crs()
         # create ssa / grain size rasters
         # RUN FUNCTION to save slope , aspect, normal vector (RASTERIO)
 

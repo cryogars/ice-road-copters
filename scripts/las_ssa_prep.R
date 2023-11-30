@@ -18,15 +18,22 @@ st_crs(las) <- crs
 x <- raster(ni_fp)
 y <- raster(nj_fp)
 z <- raster(nk_fp)
+sd <- raster(snow_depth_path)
+chm <- raster(canopy_fp)
+
 las <- merge_spatial(las, x, attribute = "n_i")
 las <- merge_spatial(las, y, attribute = "n_j")
 las <- merge_spatial(las, z, attribute = "n_k")
+las <- merge_spatial(las, sd, attribute = "SD")
+las <- merge_spatial(las, chm, attribute = "CHM")
 
 # CONVERT TO DF. FILTER OUT NA AND SELECT ONLY FIRST RETURNS.
 df <- payload(las)
 df<- filter(df, NumberOfReturns == 1)
 df<- filter(df, ReturnNumber == 1)
 df<- filter(df, n_i != "NA")
+df<- filter(df, SD >= 0.08)
+df<- filter(df, CHM <= 2)
 
 # PLACEHOLDER FOR HELI IMU DATA
 # I WILL ACTUALLY SYNC WITH GPS TIME HERE
@@ -42,5 +49,5 @@ df <- df %>%
         )
 
 # CONVERT TO RASTER /  GRID HERE
-
-
+# file paths:
+# rfl_fp and cosi_fp

@@ -28,6 +28,7 @@ import laspy
 import rioxarray as rio
 from osgeo import gdal
 import numpy as np
+import pandas as pd
 from datetime import datetime
 import logging
 import sys
@@ -35,10 +36,10 @@ import subprocess
 import os
 
 # local imports
-from laz2dem import iceroad_logging, las2uncorrectedDEM
+from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
-
+from las_ssa_functions import art_ssa
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -172,9 +173,21 @@ if __name__ == '__main__':
     canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
     canopyheight.rio.to_raster(canopy_fp)
 
-    ##### TEMP COMMENTS #####
     ##### START SSA CODE HERE #####
     if shp_fp_rfl:
+
+        # MAKE SURE R IS INSTALLED HERE
+        #from subprocess import Popen, PIPE
+        #proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
+        #exit_code = proc.wait()
+        #if exit_code == 0:
+        #    print ("Installed")
+
+
+        # Check whether dem directory exists, if not, make one
+        ssa_dir = f'{results_dir}/ssa-calc'
+        if not os.path.exists(ssa_dir):
+            os.makedirs(ssa_dir)
 
         # Displaying the parent directory of the script
         scripts_dir = os.path.dirname(__file__)
@@ -205,31 +218,68 @@ if __name__ == '__main__':
         n_k.rio.to_raster(nk_fp)        
 
         # APPLY ASP TRANSFORM TO CAL DATA
+        base_las = os.path.basename(cal_las)
+        las_name = os.path.splitext(base_las)[0]
+        pc_align_func = join(asp_dir, 'pc_align')
+        align_pc = join(results_dir,'pc-align',os.path.basename(in_dir))
+        transform_pc = join(ssa_dir,'pc-transform',las_name)
+        cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                    --initial-transform {align_pc}-snow-transform.txt \
+                    --save-transformed-source-points                            \
+                    {snow_tif} {cal_las}   \
+                    -o {transform_pc}', log)
+        
         # RUN FUNCTION to calc road cal factor --> feeds into next function
-        output_csv = f'{results_dir}/all-calibration-rfl.csv'
-        subprocess.call (["/usr/bin/Rscript", 
+        output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
+        subprocess.call(["/usr/bin/Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, shp_fp_rfl, output_csv])
+                          transform_pc, shp_fp_rfl, output_csv])
         
         # READ IN PANDAS FILE
-        # Compute median.. and calc cal-factor...
-        road_cal_factor = ''
+        df = pd.read_csv(output_csv)
+
+        # Compute median.. and calc cal-factor.
+        median_rfl = df['rfl'].median()
+        road_cal_factor = known_rfl / median_rfl
 
         # For each file in <in-dir> 
         for f in os.listdir(in_dir):
 
             # APPLY ASP TRANSFORM TO file in loop
+            base_las = os.path.basename(f)
+            las_name = os.path.splitext(base_las)[0]
+            pc_align_func = join(asp_dir, 'pc_align')
+            align_pc = join(results_dir,'pc-align',os.path.basename(in_dir))
+            transform_pc = join(ssa_dir,'pc-transform',las_name)
+            cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                        --initial-transform {align_pc}-snow-transform.txt \
+                        --save-transformed-source-points                            \
+                        {snow_tif} {f}   \
+                        -o {transform_pc}', log)
 
             # Rasterize calibrated reflectance and incidence angle
+            base_las = os.path.basename(f)
+            las_name = os.path.splitext(base_las)[0]
+            rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
+            cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
             subprocess.call (["/usr/bin/Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
-                              f, crs, ni_fp, nj_fp, nk_fp, road_cal_factor])
+                              transform_pc, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
+                              cosi_fp, snow_depth_path, canopy_fp, 
+                              road_cal_factor])
 
             # estimate SSA for the raster with cleaning
-        
-
-        pass
-        # END
+            ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
+            rfl_grid = np.array(gdal.Open(rfl_fp).ReadAsArray())
+            cosi_grid = np.array(gdal.Open(cosi_fp).ReadAsArray())
+            ssa_grid = np.empty_like(cosi_grid)
+            for i in range(rfl_grid.shape[0]):
+                for j in range(rfl_grid.shape[1]):
+                    ssa_grid[i,j] = art_ssa(rfl_grid[i,j], cosi_grid[i,j])
+            ref_raster = rio.open(rfl_fp)
+            ras_meta = ref_raster.profile
+            with rio.open(ssa_fp, 'w', **ras_meta) as dst:
+                 dst.write(ssa_grid, 1)     
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

@@ -29,6 +29,12 @@ df <- payload(las)
 
 df <- filter(df, abs(ScanAngleRank) <= 5)
 
+# COMPUTE RFL
+df <- df %>%
+    mutate( 
+      rfl = 10^(Reflectance/10)
+        )
+
 write.csv(df, output_csv)
 
 

@@ -244,7 +244,7 @@ if __name__ == '__main__':
             # APPLY ASP TRANSFORM TO file in loop
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
-            asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'snow-transform.txt')
+            asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'-snow-transform.txt')
             asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
             transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
             pdal_align_las(f, transform_pc, las_name, asp_matrix, json_dir)

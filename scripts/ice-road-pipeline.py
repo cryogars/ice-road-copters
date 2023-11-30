@@ -1,8 +1,8 @@
 """
-Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
+Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] 
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] [-c cal_las]  
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -14,6 +14,7 @@ Options:
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
                      "Intensity as Reflectance" returned by RIEGL.
     -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
+    -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
 
 """
 
@@ -24,9 +25,12 @@ from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
 import laspy
 import rioxarray as rio
+from osgeo import gdal
+import numpy as np
 from datetime import datetime
 import logging
 import sys
+import subprocess
 import os
 
 # local imports
@@ -73,6 +77,10 @@ if __name__ == '__main__':
     imu_data = args.get('-i')
     if imu_data:
         imu_data = abspath(imu_data)
+
+    cal_las = args.get('-c')
+    if cal_las:
+        cal_las = abspath(cal_las)
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -143,7 +151,10 @@ if __name__ == '__main__':
     snowon = rio.open_rasterio(snow_tif, masked=True) 
     snowon_matched = snowon.rio.reproject_match(snowoff)
     snowdepth = snowon_matched - snowoff
+
+    # Write reproject-match SnowDepth and SnowOn to disk
     snowdepth.rio.to_raster(snow_depth_path)
+    snowon_matched.rio.to_raster(snow_tif)
 
     # difference two rasters to find canopy height
     ref_dem_path = join(results_dir, 'dem.tif')
@@ -160,22 +171,53 @@ if __name__ == '__main__':
     ##### START SSA CODE HERE #####
     if shp_fp_rfl:
 
+        # Displaying the parent directory of the script
+        scripts_dir = os.path.dirname(__file__)
+
         # read crs of las file # PULL 1st one here
-        first_path = os.listdir(shp_fp_rfl)[0]
+        first_path = os.listdir(in_dir)[0]
         with laspy.open(first_path) as las:
             hdr = las.header
             crs = hdr.parse_crs()
-        
-        # create ssa / grain size rasters
-        # RUN FUNCTION to save slope , aspect, normal vector (RASTERIO)
+
+        # Compute slope and aspect from snow-on lidar
+        slope_fp = join(ice_dir, f'{basename(in_dir)}-snowon_slope.tif')
+        aspect_fp = join(ice_dir, f'{basename(in_dir)}-snowon_aspect.tif')
+        os.system(f'gdaldem slope -compute_edges {snow_tif} {slope_fp} -q')
+        os.system(f'gdaldem aspect -compute_edges -zero_for_flat {snow_tif} {aspect_fp} -q')
+        slope = rio.open_rasterio(slope_fp, masked=True)
+        aspect = rio.open_rasterio(aspect_fp, masked=True)
+
+        # Compute surface normal vector from snow-on lidar
+        ni_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_i.tif')
+        nj_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_j.tif')
+        nk_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_k.tif')
+        n_i = np.sin(np.radians(aspect)) * np.sin(np.radians(slope))
+        n_j = np.cos(np.radians(aspect)) * np.sin(np.radians(slope)) 
+        n_k = np.cos(np.radians(slope))
+        n_i.rio.to_raster(ni_fp)
+        n_j.rio.to_raster(nj_fp)
+        n_k.rio.to_raster(nk_fp)        
 
         # APPLY ASP TRANSFORM TO CAL DATA
         # RUN FUNCTION to calc road cal factor --> feeds into next function
-
+        subprocess.call (["/usr/bin/Rscript", 
+                          f"{scripts_dir}/las_ssa_cal.r", 
+                          cal_las, crs, ni_fp, nj_fp, nk_fp, road_cal_factor])
+        
         # For each file in <in-dir> 
-        # APPLY ASP TRANSFORM TO file in loop
-        #   RUN FUNCTION to estimate rfl and cosi
-        #   estimate SSA for the raster with cleaning
+        for f in os.listdir(in_dir):
+
+            # APPLY ASP TRANSFORM TO file in loop
+
+            # Rasterize calibrated reflectance and incidence angle
+            subprocess.call (["/usr/bin/Rscript", 
+                              f"{scripts_dir}/las_ssa_prep.r", 
+                              f, crs, ni_fp, nj_fp, nk_fp, road_cal_factor])
+
+            # estimate SSA for the raster with cleaning
+        
+
         pass
         # END
 

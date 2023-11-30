@@ -151,7 +151,7 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
 
     return json_to_use
 
-def mosaic_laz(in_dir, log, out_fp = 'unaligned_merged.laz', laz_prefix = ''):
+def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.laz', laz_prefix = ''):
     """
     Generates and run PDAL mosaic command.
 
@@ -165,7 +165,10 @@ def mosaic_laz(in_dir, log, out_fp = 'unaligned_merged.laz', laz_prefix = ''):
     """
     assert isdir(in_dir), f'{in_dir} is not a directory'
     # generate searching command
-    in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.laz')))
+    if las_extra_byte_format is True:
+        in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.las')))
+    else:
+        in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.laz')))
     # out fp to save to
     mosaic_fp = join(in_dir, out_fp)
     # set up mosaic command
@@ -211,7 +214,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem):
+def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -254,10 +257,13 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem):
                 break
     # mosaic
     log.info("Starting to mosaic las files...")
-    las_fps = glob(join(in_dir, '*.laz'))
+    if las_extra_byte_format is True:
+        las_fps = glob(join(in_dir, '*.las'))
+    else:
+        las_fps = glob(join(in_dir, '*.laz'))
     log.debug(f"Number of las files: {len(las_fps)}")
     mosaic_fp = join(results_dir, 'unfiltered_merge.laz')
-    mosaic_fp = mosaic_laz(in_dir, out_fp=mosaic_fp, log = log)
+    mosaic_fp = mosaic_laz(in_dir,las_extra_byte_format, out_fp=mosaic_fp, log = log)
 
     if not exists(mosaic_fp):
         log.warning('No mosaic created')

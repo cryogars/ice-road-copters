@@ -2,7 +2,7 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp]
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] 
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -66,6 +66,9 @@ if __name__ == '__main__':
     shp_fp_rfl = args.get('-r')
     if shp_fp_rfl:
         shp_fp_rfl = abspath(shp_fp_rfl)
+        las_extra_byte_format = True
+    else:
+        las_extra_byte_format = False
 
     imu_data = args.get('-i')
     if imu_data:
@@ -114,7 +117,9 @@ if __name__ == '__main__':
     # run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, user_dem = user_dem)
+    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, 
+                                                    user_dem = user_dem, 
+                                                    las_extra_byte_format = las_extra_byte_format)
     
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
@@ -146,7 +151,7 @@ if __name__ == '__main__':
     canopy = rio.open_rasterio(canopy_tif, masked=True) 
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
-    
+
     # mask snow depth from vegetation
     canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
     canopyheight.rio.to_raster(canopy_fp)

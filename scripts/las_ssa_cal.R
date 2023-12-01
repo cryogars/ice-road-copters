@@ -21,6 +21,7 @@ library(terra)
 
 las <- readLAS(cal_las)
 
+n_e_d_shift <- strsplit(n_e_d_shift, ",")
 n_shift <- as.numeric(n_e_d_shift[[1]])
 e_shift <- as.numeric(n_e_d_shift[[2]])
 d_shift <- as.numeric(n_e_d_shift[[3]])

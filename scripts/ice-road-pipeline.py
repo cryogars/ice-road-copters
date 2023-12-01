@@ -205,6 +205,7 @@ if __name__ == '__main__':
             for line in lines:
                 if "Translation vector (North-East-Down, meters): Vector3" in line: 
                     n_e_d_shifts = re.findall("[+-]?\d+\.\d+", line)
+                    n_e_d_shifts = ','.join(n_e_d_shifts)
                     break
 
         # get crs

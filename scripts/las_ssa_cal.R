@@ -12,9 +12,6 @@ shp_fp_rfl <- args[3]
 n_e_d_shift <- args[4]
 output_csv <- args[5]
 
-
-
-
 # Uses the buffer shape to clip only road points and where abs(ScanAngleRank) < 5
 # Return csv of all points for computing histogram and median
 

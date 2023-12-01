@@ -191,6 +191,15 @@ if __name__ == '__main__':
     if shp_fp_rfl:
 
         # MAKE SURE R IS INSTALLED HERE
+        # Also, needs to have all packages installed
+        #    library(raster)
+        #    library(lidR)
+        #    library(rlas)
+        #    library(dplyr)
+        #    library(readr)
+        #    library(terra)
+        #    library(sf)
+        #    library(data.table)
         proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
         exit_code = proc.wait()
         if exit_code != 0:

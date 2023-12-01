@@ -177,9 +177,8 @@ if __name__ == '__main__':
     # due to lidar processing limitations I cannot retain reflectance information using a 
     # transformation. I tested using ASP pc-align and PDAL transformation. Both of these methods
     # I lose the RIEGL reflectance data...
-    # SO, instead what I am deciding is that rotational error is less than 0.02 degrees. And so this is being ignored.
-    # And instead, we supply X, Y, and Z transformation directly to the LAS in lidR package.
-    # We do this transformation to both the helicopter position and ground returns. 
+    # SO, instead what I am deciding that ASP is ran another time (but with translation only on)
+    # And then, we supply X, Y, and Z transformation directly to the LAS in lidR package.
     if shp_fp_rfl:
 
         # MAKE SURE R IS INSTALLED HERE
@@ -188,7 +187,6 @@ if __name__ == '__main__':
         #exit_code = proc.wait()
         #if exit_code == 0:
         #    print ("Installed")
-
 
         # Check whether dem directory exists, if not, make one
         ssa_dir = f'{results_dir}/ssa-calc'
@@ -224,7 +222,7 @@ if __name__ == '__main__':
         
         # RUN FUNCTION to calc road cal factor --> feeds into next function
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
-        subprocess.call(["/usr/bin/Rscript", 
+        subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
                           cal_las, shp_fp_rfl, output_csv])
         
@@ -243,7 +241,7 @@ if __name__ == '__main__':
             las_name = os.path.splitext(base_las)[0]
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
-            subprocess.call (["/usr/bin/Rscript", 
+            subprocess.call (["Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
                               f, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
                               cosi_fp, road_cal_factor])
@@ -253,13 +251,20 @@ if __name__ == '__main__':
             rfl_grid = np.array(gdal.Open(rfl_fp).ReadAsArray())
             cosi_grid = np.array(gdal.Open(cosi_fp).ReadAsArray())
             ssa_grid = np.empty_like(cosi_grid)
+
             for i in range(rfl_grid.shape[0]):
                 for j in range(rfl_grid.shape[1]):
                     ssa_grid[i,j] = art_ssa(rfl_grid[i,j], cosi_grid[i,j])
+
             with rio.open(ssa_fp, 'w', **ras_meta) as dst:
-                 dst.write(ssa_grid, 1)  
+                 dst.write(ssa_grid, 1)
 
-
+            # Load back in and now clean it up based on CHM and SD
+            # For this threshold we use chm is less than 2m
+            # .. and snow depth is greater than 8cm
+            ssa = rio.open_rasterio(ssa_fp, masked=True)
+            ssa = ssa.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
+            ssa.rio.to_raster(ssa_fp)     
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

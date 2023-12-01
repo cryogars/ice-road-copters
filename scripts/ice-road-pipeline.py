@@ -97,8 +97,8 @@ if __name__ == '__main__':
     os.makedirs(ice_dir, exist_ok= True)
     results_dir = join(ice_dir, 'results')
     os.makedirs(results_dir, exist_ok= True)
-    json_dir = join(ice_dir, 'json')
-    os.makedirs(results_dir, exist_ok= True)
+    json_dir = join(ice_dir, 'jsons')
+    os.makedirs(json_dir, exist_ok= True)
 
     # setup logging
     log_dir = join(ice_dir, 'logs')

@@ -185,17 +185,18 @@ def pdal_align_las(orig_las_fp, transform_pc, las_name, asp_matrix, json_dir):
                 "matrix":asp_matrix,
             },
             {
-                "type":"writers.las",
+                "type":"readers.rdb",
                 "filename":transform_pc
             }
         ]
         }
     
-    json_path = f'{json_dir}/{las_name}-transform.json'
-    with open(json_path,'w') as outfile:
+    json_to_use = join(json_dir, f'temp-{las_name}.json')
+
+    with open(json_to_use,'w') as outfile:
         json.dump(json_pipeline, outfile, indent = 2)
 
-    cl_call(f'pdal pipeline {json_path}', log)     
+    cl_call(f'pdal pipeline {json_to_use}', log)     
 
     return
 

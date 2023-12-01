@@ -102,7 +102,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
             transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
             cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
                      --compute-translation-only   \
-                        {ref_dem} {input_laz}   \
+                        {ref_dem} {clipped_pc}   \
                         -o {transform_pc_temp}', log)     
             os.remove(transform_pc_temp)
 

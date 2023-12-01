@@ -59,27 +59,36 @@ df <- df %>%
 # NOTE: 0.5m spatial res
 lasheader = header_create(las)
 df$Classification <- 2
-df$gpstime <- df$cosi # put the data into acceptable headers
-df$Reflectance <- df$rfl
+df$Z <- df$cosi # put the data into acceptable headers
+df$gpstime <- df$rfl
 write.las(temp_fp,lasheader, df)
 
 # PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
 n_e_d_shift <- strsplit(n_e_d_shift, ",")
 n_shift <- as.numeric(n_e_d_shift[[1]][1])
 e_shift <- as.numeric(n_e_d_shift[[1]][2])
-d_shift <- as.numeric(n_e_d_shift[[1]][3])
+#d_shift <- as.numeric(n_e_d_shift[[1]][3])
 
 # First do the cosi
 las <- readLAS(temp_fp)
 st_crs(las) <- crs
 las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
 las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
-las@data$Z <- las@data$gpstime
 cosi_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
+values(cosi_raster)[values(cosi_raster) < 0] = NA
+pr <- as.polygons(cosi_raster > -Inf)
+pr <- buffer(pr,-300) #BUFFER SIZE HERE is set to 300 [m]. Can be adjusted if needed.
+# This removes the edge of flightline where raster interpolation is poor.
+cosi_raster <- mask(cosi_raster, pr)
 writeRaster(cosi_raster, cosi_fp, overwrite=TRUE)
 
 # Now do the rfl
-las@data$Z <- las@data$Reflectance
+las@data$Z <- las@data$gpstime
 rfl_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
+values(rfl_raster)[values(rfl_raster) < 0] = NA
+pr <- as.polygons(rfl_raster > -Inf)
+pr <- buffer(pr,-300) #BUFFER SIZE HERE is set to 300 [m]. Can be adjusted if needed.
+# This removes the edge of flightline where raster interpolation is poor.
+rfl_raster <- mask(rfl_raster, pr)
 writeRaster(rfl_raster, rfl_fp, overwrite=TRUE)
 

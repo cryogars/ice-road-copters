@@ -16,6 +16,7 @@ cosi_fp <- args[8]
 road_cal_factor <- args[9]
 
 # PATH TO SURFACE RETURNS AND SET CRS
+crs <- as.numeric(crs)
 las <- readLAS(f)
 st_crs(las) <- crs
 

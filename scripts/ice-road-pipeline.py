@@ -210,7 +210,8 @@ if __name__ == '__main__':
 
         # get crs
         ref_raster = rasterio.open(snow_tif)
-        crs = ref_raster.crs    
+        crs = ref_raster.crs
+        crs = str(crs).split(":",1)[1]    
         ras_meta = ref_raster.profile
 
         # Compute slope and aspect from snow-on lidar

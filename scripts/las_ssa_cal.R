@@ -20,7 +20,7 @@ output_csv <- args[5]
 # dsn = /Users/brent/Code/ice-road-copters/transform_area/Eagle/
 
 # Assumes this pandas df is reasonable size and can be saved
-
+crs <- as.numeric(crs)
 las <- readLAS(cal_las)
 st_crs(las) <- crs
 

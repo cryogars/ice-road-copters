@@ -3,6 +3,7 @@ library(lidR)
 library(dplyr)
 library(readr)
 library(terra)
+library(sf)
 
 
 args <- commandArgs(trailingOnly = TRUE)

@@ -21,6 +21,10 @@ library(terra)
 
 las <- readLAS(cal_las)
 
+n_shift <- as.numeric(n_e_d_shift[[1]])
+e_shift <- as.numeric(n_e_d_shift[[2]])
+d_shift <- as.numeric(n_e_d_shift[[3]])
+
 # SHIFT X, Y, and Z based on ASP PC_ALIGN
 las@data$X <- las@data$X  + e_shift
 las@data$Y <- las@data$Y  + n_shift

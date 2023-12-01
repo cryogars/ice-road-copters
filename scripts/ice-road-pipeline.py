@@ -34,6 +34,7 @@ import logging
 import re
 import sys
 import subprocess
+from subprocess import Popen, PIPE
 import os
 
 # local imports
@@ -184,11 +185,10 @@ if __name__ == '__main__':
     if shp_fp_rfl:
 
         # MAKE SURE R IS INSTALLED HERE
-        #from subprocess import Popen, PIPE
-        #proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
-        #exit_code = proc.wait()
-        #if exit_code == 0:
-        #    print ("Installed")
+        proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
+        exit_code = proc.wait()
+        if exit_code != 0:
+            raise Exception("Please install R on this system.")
 
         # Check whether dem directory exists, if not, make one
         ssa_dir = f'{results_dir}/ssa-calc'
@@ -199,15 +199,12 @@ if __name__ == '__main__':
         scripts_dir = os.path.dirname(__file__)
 
         # Load in the ASP translational-only matrix from pc-align tool
-        asp_matrix_fp = glob.glob(f'{ice_dir}/results/pc-align-translation-only/temp-log*.txt')[0]
+        asp_matrix_fp = glob(f'{ice_dir}/results/pc-align-translation-only/temp-log*.txt')[0]
         with open(asp_matrix_fp, 'r') as f:
             lines = f.readlines()
             for line in lines:
-                if re.search(r'Translation vector (North-East-Down, meters):', line):
-                    list_values = re.findall("[+-]?\d+\.\d+", line)
-                    n_shift = float(list_values[0])
-                    e_shift = float(list_values[1])
-                    d_shift = float(list_values[2])
+                if "Translation vector (North-East-Down, meters): Vector3" in line: 
+                    n_e_d_shifts = re.findall("[+-]?\d+\.\d+", line)
                     break
 
         # get crs
@@ -238,7 +235,7 @@ if __name__ == '__main__':
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, shp_fp_rfl, n_shift, e_shift, d_shift, output_csv])
+                          cal_las, shp_fp_rfl, n_e_d_shifts, output_csv])
         
         # READ IN PANDAS FILE
         df = pd.read_csv(output_csv)
@@ -257,7 +254,8 @@ if __name__ == '__main__':
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
             subprocess.call (["Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
-                              f, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
+                              f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
+                              n_e_d_shifts,
                               cosi_fp, road_cal_factor])
 
             # estimate SSA for the raster

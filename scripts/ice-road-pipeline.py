@@ -175,6 +175,13 @@ if __name__ == '__main__':
     canopyheight.rio.to_raster(canopy_fp)
 
     ##### START SSA CODE HERE #####
+    # due to lidar processing limitations I cannot retain reflectance information using a 
+    # transformation. I tested using ASP pc-align and PDAL transformation. Both of these methods
+    # I lose the RIEGL reflectance data. PDAL has a riegl plugin but this is so far removed from where
+    # where are trying to go with this..
+    # SO, instead what I am deciding is that rotational error is less than 0.01 %. And so this is being ignored.
+    # And instead, we supply X, Y, and Z transformation directly to the LAS in lidR package.
+    # We do this transformation to both the helicopter position and ground returns. 
     if shp_fp_rfl:
 
         # MAKE SURE R IS INSTALLED HERE
@@ -216,20 +223,12 @@ if __name__ == '__main__':
         n_i.rio.to_raster(ni_fp)
         n_j.rio.to_raster(nj_fp)
         n_k.rio.to_raster(nk_fp)        
-
-        # APPLY ASP TRANSFORM TO CAL DATA
-        base_las = os.path.basename(cal_las)
-        las_name = os.path.splitext(base_las)[0]
-        asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'-snow-transform.txt')
-        asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
-        transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
-        pdal_align_las(cal_las, transform_pc, las_name, asp_matrix, json_dir)
         
         # RUN FUNCTION to calc road cal factor --> feeds into next function
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["/usr/bin/Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          transform_pc, shp_fp_rfl, output_csv])
+                          cal_las, shp_fp_rfl, output_csv])
         
         # READ IN PANDAS FILE
         df = pd.read_csv(output_csv)
@@ -241,14 +240,6 @@ if __name__ == '__main__':
         # For each file in <in-dir> 
         for f in os.listdir(in_dir):
 
-            # APPLY ASP TRANSFORM TO file in loop
-            base_las = os.path.basename(f)
-            las_name = os.path.splitext(base_las)[0]
-            asp_matrix_fp = join(results_dir,'pc-align',os.path.basename(in_dir)+'-snow-transform.txt')
-            asp_matrix = open(asp_matrix_fp).read().replace('\n', '')
-            transform_pc = join(ssa_dir,f'pdal-transform-{las_name}.las')
-            pdal_align_las(f, transform_pc, las_name, asp_matrix, json_dir)
-
             # Rasterize calibrated reflectance and incidence angle
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
@@ -256,7 +247,7 @@ if __name__ == '__main__':
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
             subprocess.call (["/usr/bin/Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
-                              transform_pc, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
+                              f, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
                               cosi_fp, snow_depth_path, canopy_fp, 
                               road_cal_factor])
 

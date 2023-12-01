@@ -41,6 +41,10 @@ df$X_h <-df$X+1000
 df$Y_h <-df$Y+1000 
 df$Z_h <-df$Z + 15000 
 
+# SHIFT X, Y, and Z based on ASP PC_ALIGN
+# las@data$X <- las@data$X  + X_SHIFT
+# ETC DO THE SAME FOR HELI.
+
 # COMPUTE ALL RFL AND INCIDENCE ANGLES
 df <- df %>%
     mutate(

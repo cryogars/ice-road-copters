@@ -191,35 +191,6 @@ def laz_align(in_dir,
     return snow_tif, canopy_tif
 
 
-def pdal_align_las(orig_las_fp, transform_pc, las_name, asp_matrix, json_dir):
-
-    # Create .json file for PDAL clip
-    json_pipeline = {
-        "pipeline":[
-            orig_las_fp,
-            {
-                "type":"filters.transformation",
-                "matrix":asp_matrix,
-            },
-            {
-                "type":"readers.rdb",
-                "filename":transform_pc
-            }
-        ]
-        }
-    
-    json_to_use = join(json_dir, f'temp-{las_name}.json')
-
-    with open(json_to_use,'w') as outfile:
-        json.dump(json_pipeline, outfile, indent = 2)
-
-    cl_call(f'pdal pipeline {json_to_use}', log)     
-
-    return
-
-
-
-
 
 if __name__ == '__main__':
     laz_align('/Users/brent/Documents/MCS/mcs0407/results')

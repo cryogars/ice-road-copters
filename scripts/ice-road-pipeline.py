@@ -174,12 +174,13 @@ if __name__ == '__main__':
     canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
     canopyheight.rio.to_raster(canopy_fp)
 
+
     ##### START SSA CODE HERE #####
     # due to lidar processing limitations I cannot retain reflectance information using a 
     # transformation. I tested using ASP pc-align and PDAL transformation. Both of these methods
     # I lose the RIEGL reflectance data...
-    # SO, instead what I am deciding that ASP is ran another time (but with translation only on)
-    # And then, we supply X, Y, and Z transformation directly to the LAS in lidR package.
+    # SO, instead  deciding that ASP is ran another time (but with translation-only on)
+    # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
     if shp_fp_rfl:
 
         # MAKE SURE R IS INSTALLED HERE
@@ -204,12 +205,10 @@ if __name__ == '__main__':
             for line in lines:
                 if re.search(r'Translation vector (North-East-Down, meters):', line):
                     list_values = re.findall("[+-]?\d+\.\d+", line)
+                    n_shift = float(list_values[0])
+                    e_shift = float(list_values[1])
+                    d_shift = float(list_values[2])
                     break
-        print(list_values)
-        # NORTH - EAST - DOWN
-        # + N
-        # + E
-        # - D
 
         # get crs
         ref_raster = rasterio.open(snow_tif)
@@ -239,7 +238,7 @@ if __name__ == '__main__':
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, shp_fp_rfl, output_csv])
+                          cal_las, shp_fp_rfl, n_shift, e_shift, d_shift, output_csv])
         
         # READ IN PANDAS FILE
         df = pd.read_csv(output_csv)

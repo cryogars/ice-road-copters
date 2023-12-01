@@ -22,8 +22,9 @@ library(terra)
 las <- readLAS(cal_las)
 
 # SHIFT X, Y, and Z based on ASP PC_ALIGN
-# las@data$X <- las@data$X  + X_SHIFT
-# ETC
+las@data$X <- las@data$X  + e_shift
+las@data$Y <- las@data$Y  + n_shift
+las@data$Z <- las@data$Z  - d_shift
 
 spdf <- st_read(file.path(shp_fp_rfl))
 

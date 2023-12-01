@@ -42,8 +42,10 @@ df <- df %>%
         )
 
 # SHIFT X, Y, and Z based on ASP PC_ALIGN
-# las@data$X <- las@data$X  + X_SHIFT
-# ETC 
+df$X <- df$X + e_shift
+df$Y <- df$Y + n_shift
+df$Z <- df$Z - d_shift
+
 
 # CONVERT TO RASTER /  GRID HERE
 # file paths:

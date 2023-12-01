@@ -49,9 +49,9 @@ df <- df %>%
 
 # SHIFT X, Y, and Z based on ASP PC_ALIGN
 n_e_d_shift <- strsplit(n_e_d_shift, ",")
-n_shift <- as.numeric(n_e_d_shift[[1]])
-e_shift <- as.numeric(n_e_d_shift[[2]])
-d_shift <- as.numeric(n_e_d_shift[[3]])
+n_shift <- as.numeric(n_e_d_shift[[1]][1])
+e_shift <- as.numeric(n_e_d_shift[[1]][2])
+d_shift <- as.numeric(n_e_d_shift[[1]][3])
 df$X <- df$X + e_shift
 df$Y <- df$Y + n_shift
 df$Z <- df$Z - d_shift

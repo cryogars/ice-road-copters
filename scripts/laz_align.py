@@ -104,7 +104,6 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                      --compute-translation-only   \
                         {ref_dem} {clipped_pc}   \
                         -o {transform_pc_temp}', log)     
-            os.remove(transform_pc_temp)
 
         # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
         point2dem_func = join(asp_dir, 'point2dem')

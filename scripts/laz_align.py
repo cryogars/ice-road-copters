@@ -100,9 +100,8 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
         # --compute-translation-only
         if las_extra_byte_format is True:
             transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
-            cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
-                        --initial-transform {align_pc}-transform.txt \
-                        --save-transformed-source-points --compute-translation-only   \
+            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                     --compute-translation-only   \
                         {ref_dem} {input_laz}   \
                         -o {transform_pc_temp}', log)     
             os.remove(transform_pc_temp)

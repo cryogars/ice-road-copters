@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 import logging
+import re
 import sys
 import subprocess
 import os
@@ -195,6 +196,20 @@ if __name__ == '__main__':
 
         # Displaying the parent directory of the script
         scripts_dir = os.path.dirname(__file__)
+
+        # Load in the ASP translational-only matrix from pc-align tool
+        asp_matrix_fp = glob.glob(f'{ice_dir}/results/pc-align-translation-only/temp-log*.txt')[0]
+        with open(asp_matrix_fp, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if re.search(r'Translation vector (North-East-Down, meters):', line):
+                    list_values = re.findall("[+-]?\d+\.\d+", line)
+                    break
+        print(list_values)
+        # NORTH - EAST - DOWN
+        # + N
+        # + E
+        # - D
 
         # get crs
         ref_raster = rasterio.open(snow_tif)

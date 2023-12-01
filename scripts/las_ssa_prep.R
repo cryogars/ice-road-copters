@@ -75,11 +75,11 @@ st_crs(las) <- crs
 las@data$X <- las@data$X + e_shift
 las@data$Y <- las@data$Y + n_shift
 las@data$Z <- las@data$gpstime
-cosi_raster <- rasterize_terrain(las, algorithm = tin(), res = pix_size, pkg ="terra")
+cosi_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
 writeRaster(cosi_raster, cosi_fp, overwrite=TRUE)
 
 # Now do the rfl
 las@data$Z <- las@data$Reflectance
-rfl_raster <- rasterize_terrain(las, algorithm = tin(), res = pix_size, pkg ="terra")
+rfl_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
 writeRaster(rfl_raster, rfl_fp, overwrite=TRUE)
 

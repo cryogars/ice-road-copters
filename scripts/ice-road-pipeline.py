@@ -24,7 +24,6 @@ from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
-import json
 import rioxarray as rio
 import rasterio
 from osgeo import gdal

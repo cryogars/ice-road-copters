@@ -72,8 +72,8 @@ d_shift <- as.numeric(n_e_d_shift[[1]][3])
 # First do the cosi
 las <- readLAS(temp_fp)
 st_crs(las) <- crs
-las@data$X <- las@data$X + e_shift
-las@data$Y <- las@data$Y + n_shift
+las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
+las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
 las@data$Z <- las@data$gpstime
 cosi_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
 writeRaster(cosi_raster, cosi_fp, overwrite=TRUE)

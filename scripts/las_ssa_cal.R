@@ -1,10 +1,11 @@
 library(raster)
 library(lidR)
+library(rlas)
 library(dplyr)
 library(readr)
 library(terra)
 library(sf)
-
+library(data.table)
 
 args <- commandArgs(trailingOnly = TRUE)
 cal_las <- args[1]
@@ -47,7 +48,7 @@ df <- filter(df, abs(ScanAngleRank) <= 5)
 df <- df %>%
     mutate( 
       rfl = 10^(Reflectance/10)
-        )
+)
 
 write.csv(df, output_csv)
 

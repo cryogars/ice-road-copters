@@ -15,6 +15,7 @@ Options:
                      "Intensity as Reflectance" returned by RIEGL.
     -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
     -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+                     To avoid confusion, please supply this file in a different directory from <in_dir>.
     -k known_rfl     Known intrinsic reflectance (float/real) for target identified in shp_fp_rfl.
 
 """
@@ -185,7 +186,7 @@ if __name__ == '__main__':
     # SO, instead  deciding that ASP is ran another time (but with translation-only on)
     # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
     # Command for meee...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.12
+    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1384
 
     if shp_fp_rfl:
 
@@ -216,6 +217,8 @@ if __name__ == '__main__':
         # get crs
         ref_raster = rasterio.open(snow_tif)
         crs = ref_raster.crs
+        pixel_size_x, pixel_size_y = ref_raster.res
+        pix_size = str(pixel_size_x)
         crs = str(crs).split(":",1)[1]    
         ras_meta = ref_raster.profile
 
@@ -250,6 +253,7 @@ if __name__ == '__main__':
         # Compute median.. and calc cal-factor.
         median_rfl = df['rfl'].median()
         road_cal_factor = known_rfl / median_rfl
+        road_cal_factor = str(road_cal_factor)
 
         # For each file in <in-dir> 
         for f in os.listdir(in_dir):
@@ -259,11 +263,14 @@ if __name__ == '__main__':
             las_name = os.path.splitext(base_las)[0]
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
+            temp_fp = f'{ssa_dir}/{las_name}-temp.las'
             subprocess.call (["Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
                               f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
                               n_e_d_shift,
-                              cosi_fp, road_cal_factor])
+                              cosi_fp, road_cal_factor,
+                              pix_size, temp_fp])
+            os.remove(temp_fp)
 
             # estimate SSA for the raster
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'

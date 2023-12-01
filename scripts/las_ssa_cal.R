@@ -37,7 +37,7 @@ las@data$Z <- las@data$Z  - d_shift
 
 spdf <- st_read(file.path(shp_fp_rfl))
 
-las <- lasclip(las, spdf)
+las <- clip_roi(las, spdf)
 
 df <- payload(las)
 

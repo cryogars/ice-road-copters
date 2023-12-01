@@ -185,7 +185,8 @@ if __name__ == '__main__':
     # I lose the RIEGL reflectance data...
     # SO, instead  deciding that ASP is ran another time (but with translation-only on)
     # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
-    # Command for meee...
+
+    # Command for testing...
     # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1384
 
     if shp_fp_rfl:

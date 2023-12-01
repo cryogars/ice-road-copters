@@ -23,6 +23,7 @@ temp_fp <- args[11]
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
 road_cal_factor <- as.numeric(road_cal_factor)
+pix_size <- as.numeric(pix_size)
 las <- readLAS(f)
 st_crs(las) <- crs
 
@@ -53,35 +54,32 @@ df <- df %>%
       rfl = 10^(Reflectance/10) * road_cal_factor
         )
 
-# SHIFT X, Y, and Z based on ASP PC_ALIGN (Z becomes irrelevant but doing anyway)
-n_e_d_shift <- strsplit(n_e_d_shift, ",")
-n_shift <- as.numeric(n_e_d_shift[[1]][1])
-e_shift <- as.numeric(n_e_d_shift[[1]][2])
-d_shift <- as.numeric(n_e_d_shift[[1]][3])
-df$X <- df$X + e_shift
-df$Y <- df$Y + n_shift
-df$Z <- df$Z - d_shift
-
 # MAKE TWO NEW TEMP LAS FILES THAT WILL HOLD COSI AND RFL AS THE Z VALUE
 # THEN, I WILL TIN() THEM USING rLIDR PACKAGE.
 # NOTE: 0.5m spatial res
 lasheader = header_create(las)
 df$Classification <- 2
-df_cosi = copy(df)
-df_cosi$Z <- df_cosi$cosi
-df$Z <- df$rfl
+df$gpstime <- df$cosi # put the data into acceptable headers
+df$Reflectance <- df$rfl
+write.las(temp_fp,lasheader, df)
+
+# PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
+n_e_d_shift <- strsplit(n_e_d_shift, ",")
+n_shift <- as.numeric(n_e_d_shift[[1]][1])
+e_shift <- as.numeric(n_e_d_shift[[1]][2])
+d_shift <- as.numeric(n_e_d_shift[[1]][3])
 
 # First do the cosi
-write.las(temp_fp,lasheader, df_cosi)
 las <- readLAS(temp_fp)
 st_crs(las) <- crs
-cosi_raster <- rasterize_terrain(las, algorithm = tin(), res = 0.5, pkg ="terra")
+las@data$X <- las@data$X + e_shift
+las@data$Y <- las@data$Y + n_shift
+las@data$Z <- las@data$gpstime
+cosi_raster <- rasterize_terrain(las, algorithm = tin(), res = pix_size, pkg ="terra")
 writeRaster(cosi_raster, cosi_fp, overwrite=TRUE)
 
 # Now do the rfl
-write.las(temp_fp,lasheader, df)
-las <- readLAS(temp_fp)
-st_crs(las) <- crs
-rfl_raster <- rasterize_terrain(las, algorithm = tin(), res = 0.5, pkg ="terra")
+las@data$Z <- las@data$Reflectance
+rfl_raster <- rasterize_terrain(las, algorithm = tin(), res = pix_size, pkg ="terra")
 writeRaster(rfl_raster, rfl_fp, overwrite=TRUE)
 

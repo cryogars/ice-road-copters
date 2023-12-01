@@ -140,7 +140,7 @@ if __name__ == '__main__':
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
     snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
-         log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid)
+         log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid, las_extra_byte_format=las_extra_byte_format)
     
     # clean up after ASP a bit
     for fp in os.listdir(ice_dir):
@@ -177,9 +177,8 @@ if __name__ == '__main__':
     ##### START SSA CODE HERE #####
     # due to lidar processing limitations I cannot retain reflectance information using a 
     # transformation. I tested using ASP pc-align and PDAL transformation. Both of these methods
-    # I lose the RIEGL reflectance data. PDAL has a riegl plugin but this is so far removed from where
-    # where are trying to go with this..
-    # SO, instead what I am deciding is that rotational error is less than 0.01 %. And so this is being ignored.
+    # I lose the RIEGL reflectance data...
+    # SO, instead what I am deciding is that rotational error is less than 0.02 degrees. And so this is being ignored.
     # And instead, we supply X, Y, and Z transformation directly to the LAS in lidR package.
     # We do this transformation to both the helicopter position and ground returns. 
     if shp_fp_rfl:
@@ -248,10 +247,9 @@ if __name__ == '__main__':
             subprocess.call (["/usr/bin/Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
                               f, crs, ni_fp, nj_fp, nk_fp, rfl_fp, 
-                              cosi_fp, snow_depth_path, canopy_fp, 
-                              road_cal_factor])
+                              cosi_fp, road_cal_factor])
 
-            # estimate SSA for the raster with cleaning
+            # estimate SSA for the raster
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
             rfl_grid = np.array(gdal.Open(rfl_fp).ReadAsArray())
             cosi_grid = np.array(gdal.Open(cosi_fp).ReadAsArray())
@@ -260,7 +258,9 @@ if __name__ == '__main__':
                 for j in range(rfl_grid.shape[1]):
                     ssa_grid[i,j] = art_ssa(rfl_grid[i,j], cosi_grid[i,j])
             with rio.open(ssa_fp, 'w', **ras_meta) as dst:
-                 dst.write(ssa_grid, 1)     
+                 dst.write(ssa_grid, 1)  
+
+
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

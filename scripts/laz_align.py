@@ -12,7 +12,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif):
+def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, las_extra_byte_format=False):
         # Clip clean_PC to the transform_area using PDAL
         # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
         clipped_pc = join(result_dir, 'clipped_PC.laz')
@@ -91,6 +91,22 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                     {ref_dem} {input_laz}   \
                     -o {transform_pc}', log)
 
+        # Since there are issues in transforming the point cloud and retaining reflectance,
+        # the best I can do is translation only and no rotation..
+        # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
+        # will be called in order to save the X,Y,Z translation only. This will not be applied
+        # to the snow depth products, so there may be some subtle differences when comparing between the two. 
+        # However, this is in hopes to retain the higher information where we can..
+        # --compute-translation-only
+        if las_extra_byte_format is True:
+            transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
+            cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                        --initial-transform {align_pc}-transform.txt \
+                        --save-transformed-source-points --compute-translation-only   \
+                        {ref_dem} {input_laz}   \
+                        -o {transform_pc_temp}', log)     
+            os.remove(transform_pc_temp)
+
         # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
         point2dem_func = join(asp_dir, 'point2dem')
         # final_tif = join(ice_dir, 'pc-grid', 'run')
@@ -107,7 +123,8 @@ def laz_align(in_dir,
             align_shp = 'transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters=2.5, 
             dem_is_geoid=False, 
-            asp_dir = None):
+            asp_dir = None,
+            las_extra_byte_format=False):
     '''
     Align point cloud using snow-off road polygon.
 
@@ -160,7 +177,7 @@ def laz_align(in_dir,
         
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = snow_final_tif)
+        final_tif = snow_final_tif, las_extra_byte_format=las_extra_byte_format)
 
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\

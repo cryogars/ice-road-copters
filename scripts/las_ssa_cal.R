@@ -1,13 +1,18 @@
-install.packages('raster', repos = "http://cran.us.r-project.org")
-install.packages('lidR', repos = "http://cran.us.r-project.org")
-install.packages('dplyr', repos = "http://cran.us.r-project.org")
-install.packages('readr', repos = "http://cran.us.r-project.org")
-install.packages('terra', repos = "http://cran.us.r-project.org")
 library(raster)
 library(lidR)
 library(dplyr)
 library(readr)
 library(terra)
+
+
+args <- commandArgs(trailingOnly = TRUE)
+cal_las <- args[1]
+crs <- args[2]
+shp_fp_rfl <- args[3]
+n_e_d_shift <- args[4]
+output_csv <- args[5]
+
+
 
 
 # Uses the buffer shape to clip only road points and where abs(ScanAngleRank) < 5
@@ -20,6 +25,7 @@ library(terra)
 # Assumes this pandas df is reasonable size and can be saved
 
 las <- readLAS(cal_las)
+st_crs(las) <- crs
 
 n_e_d_shift <- strsplit(n_e_d_shift, ",")
 n_shift <- as.numeric(n_e_d_shift[[1]])

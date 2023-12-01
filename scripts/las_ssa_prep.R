@@ -1,14 +1,19 @@
-install.packages('raster', repos = "http://cran.us.r-project.org")
-install.packages('lidR', repos = "http://cran.us.r-project.org")
-install.packages('dplyr', repos = "http://cran.us.r-project.org")
-install.packages('readr', repos = "http://cran.us.r-project.org")
-install.packages('terra', repos = "http://cran.us.r-project.org")
 library(raster)
 library(lidR)
 library(dplyr)
 library(readr)
 library(terra)
 
+args <- commandArgs(trailingOnly = TRUE)
+f <- args[1]
+crs <- args[2]
+ni_fp <- args[3]
+nj_fp <- args[4]
+nk_fp <- args[5]
+rfl_fp <- args[6]
+n_e_d_shift <- args[7]
+cosi_fp <- args[8]
+road_cal_factor <- args[9]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 las <- readLAS(f)

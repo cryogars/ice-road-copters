@@ -204,8 +204,8 @@ if __name__ == '__main__':
             lines = f.readlines()
             for line in lines:
                 if "Translation vector (North-East-Down, meters): Vector3" in line: 
-                    n_e_d_shifts = re.findall("[+-]?\d+\.\d+", line)
-                    n_e_d_shifts = ','.join(n_e_d_shifts)
+                    n_e_d_shift = re.findall("[+-]?\d+\.\d+", line)
+                    n_e_d_shift = ','.join(n_e_d_shift)
                     break
 
         # get crs
@@ -236,7 +236,7 @@ if __name__ == '__main__':
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, shp_fp_rfl, n_e_d_shifts, output_csv])
+                          cal_las, crs, shp_fp_rfl, n_e_d_shift, output_csv])
         
         # READ IN PANDAS FILE
         df = pd.read_csv(output_csv)
@@ -256,7 +256,7 @@ if __name__ == '__main__':
             subprocess.call (["Rscript", 
                               f"{scripts_dir}/las_ssa_prep.r", 
                               f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                              n_e_d_shifts,
+                              n_e_d_shift,
                               cosi_fp, road_cal_factor])
 
             # estimate SSA for the raster

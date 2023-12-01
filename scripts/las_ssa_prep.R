@@ -66,6 +66,7 @@ df$Z <- df$Z - d_shift
 # THEN, I WILL TIN() THEM USING rLIDR PACKAGE.
 # NOTE: 0.5m spatial res
 lasheader = header_create(las)
+df$Classification <- 2
 df_cosi = copy(df)
 df_cosi$Z <- df_cosi$cosi
 df$Z <- df$rfl

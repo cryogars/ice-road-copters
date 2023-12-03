@@ -22,7 +22,6 @@ road_cal_factor <- args[9]
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
 road_cal_factor <- as.numeric(road_cal_factor)
-pix_size <- as.numeric(pix_size)
 las <- readLAS(f)
 st_crs(las) <- crs
 

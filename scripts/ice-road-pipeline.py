@@ -241,8 +241,7 @@ if __name__ == '__main__':
         # get crs
         ref_raster = rasterio.open(snow_tif)
         crs = ref_raster.crs
-        pixel_size_x, pixel_size_y = ref_raster.res
-        pix_size = str(pixel_size_x)
+        pix_size, _ = ref_raster.res
         crs = str(crs).split(":",1)[1]    
         ras_meta = ref_raster.profile
 

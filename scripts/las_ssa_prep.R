@@ -54,9 +54,8 @@ df <- df %>%
       rfl = 10^(Reflectance/10) * road_cal_factor
         )
 
-# MAKE TWO NEW TEMP LAS FILES THAT WILL HOLD COSI AND RFL AS THE Z VALUE
-# THEN, I WILL TIN() THEM USING rLIDR PACKAGE.
-# NOTE: 0.5m spatial res
+# MAKE NEW TEMP LAS FILES THAT WILL HOLD COSI AND RFL AS THE Z VALUE
+# THEN, I WILL IDW FUNCTION VIA rLIDR PACKAGE.
 lasheader = header_create(las)
 df$Classification <- 2
 df$Z <- df$cosi # put the data into acceptable headers

@@ -16,7 +16,7 @@ Options:
     -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
     -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
-    -k known_rfl     Known intrinsic reflectance (float/real) for target identified in shp_fp_rfl.
+    -k known_rfl     Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
 
 """
 
@@ -206,19 +206,10 @@ if __name__ == '__main__':
         b = 1.6
 
         # MAKE SURE R IS INSTALLED HERE
-        # Also, needs to have all packages installed
-        #    library(raster)
-        #    library(lidR)
-        #    library(rlas)
-        #    library(dplyr)
-        #    library(readr)
-        #    library(terra)
-        #    library(sf)
-        #    library(data.table)
         proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
         exit_code = proc.wait()
         if exit_code != 0:
-            raise Exception("Please install R on this system.")
+            raise Exception("Please install R on this system and packages: raster, lidR, rlas, dplyr, readr, terra,sf, data.table.")
 
         # Check whether dem directory exists, if not, make one
         ssa_dir = f'{results_dir}/ssa-calc'
@@ -286,7 +277,7 @@ if __name__ == '__main__':
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
 
             # Getting a translated "LAS" file
-            # "LAS" in quotations bc I am hiding the cosi and rfl here
+            # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
             # with the intention to do fast IDW in the next step.
             subprocess.call(["Rscript", 
                             f"{scripts_dir}/las_ssa_prep.r", 
@@ -294,9 +285,9 @@ if __name__ == '__main__':
                             n_e_d_shift,
                             cosi_fp, road_cal_factor])
 
-
             # Run PDAL IDW for rfl_fp and cosi_fp
             # ZACH: resolution is 1.0 in laz2dem.py??
+            # Also, can you check this is the right way to run this pipeline..
             rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
             json_path = join(json_dir, 'temp.json')
@@ -305,8 +296,6 @@ if __name__ == '__main__':
                     rfl_fp,
                     {
                         "type":"writers.gdal",
-                    },
-                    {
                         "filename":rfl_fp_grid,
                         "resolution":pix_size, 
                         "output_type":"idw"
@@ -319,13 +308,12 @@ if __name__ == '__main__':
             cl_call(f'pdal pipeline {json_path}', log)      
             os.remove(json_path)
 
+            # Running again for the incidence angle...
             json_pipeline = {
                 "pipeline": [
                     cosi_fp,
                     {
                         "type":"writers.gdal",
-                    },
-                    {
                         "filename":cosi_fp_grid,
                         "resolution":pix_size, 
                         "output_type":"idw"
@@ -339,7 +327,7 @@ if __name__ == '__main__':
             os.remove(rfl_fp)
             os.remove(cosi_fp)
 
-            # Prepare inputs needed for SSA raster (this is fast here)
+            # Prepare inputs needed for SSA raster (vectorized operation)
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
             sini_fp = f'{ssa_dir}/{las_name}-sini.tif'
             theta_fp = f'{ssa_dir}/{las_name}-theta.tif'
@@ -363,7 +351,7 @@ if __name__ == '__main__':
             theta_grid = rio.open_rasterio(theta_fp, masked=True)
             rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
             
-            # Apply ART - assuming all pixels are snow, directly solve SSA (also fast)
+            # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
             ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
 
             # Then, go back and clean it up based on CHM and SD

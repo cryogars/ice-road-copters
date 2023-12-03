@@ -33,6 +33,7 @@ import pandas as pd
 from datetime import datetime
 import logging
 import re
+import json
 import sys
 import subprocess
 from subprocess import Popen, PIPE
@@ -186,10 +187,23 @@ if __name__ == '__main__':
     # SO, instead  deciding that ASP is ran another time (but with translation-only on)
     # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
 
+    # Additional notes for Zach, bottleneck on speed at this point is the IDW to convert las to .tif
+    # The main issue why this is so slow is that we have to run each flight line independently to keep incidence angle information.
+    # Which you would think would mean a good workflow for running in parallel, however, each flightline needs roughly 64GB RAM to process..
+    # With the 11-12 flightlines we have here, that is a pretty beefy ask for resources..
+
+
     # Command for testing...
     # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1384
 
     if shp_fp_rfl:
+
+        # params for SSA function
+        k_ice = 1.8983928418833426e-06
+        wl = 1064*1e-9
+        d_ice = 917
+        g = 0.85
+        b = 1.6
 
         # MAKE SURE R IS INSTALLED HERE
         # Also, needs to have all packages installed
@@ -251,19 +265,17 @@ if __name__ == '__main__':
         n_j.rio.to_raster(nj_fp)
         n_k.rio.to_raster(nk_fp)        
         
-        # RUN FUNCTION to calc road cal factor --> feeds into next function
+        # Calcs calibration stats from target
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
                           cal_las, crs, shp_fp_rfl, n_e_d_shift, output_csv])
         
-        # READ IN PANDAS FILE
+        # Read in cal data and estimate factor
         df = pd.read_csv(output_csv)
-
-        # Compute median.. and calc cal-factor.
         median_rfl = df['rfl'].median()
         road_cal_factor = known_rfl / median_rfl
-        road_cal_factor = str(road_cal_factor)
+        road_cal_factor = str(road_cal_factor) #convert to str for R
 
         # For each file in <in-dir> 
         for f in os.listdir(in_dir):
@@ -271,52 +283,95 @@ if __name__ == '__main__':
             # Rasterize calibrated reflectance and incidence angle
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
-            rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
-            cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
-            temp_fp = f'{ssa_dir}/{las_name}-temp.las'
-            if rfl_fp: #for now for testing...
-                pass
-            else:
-                subprocess.call (["Rscript", 
-                                f"{scripts_dir}/las_ssa_prep.r", 
-                                f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                                n_e_d_shift,
-                                cosi_fp, road_cal_factor,
-                                pix_size, temp_fp])
-                os.remove(temp_fp)
+            rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
+            cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
 
-            # estimate SSA for the raster
+            # Getting a translated "LAS" file
+            # "LAS" in quotations bc I am hiding the cosi and rfl here
+            # with the intention to do fast IDW in the next step.
+            subprocess.call(["Rscript", 
+                            f"{scripts_dir}/las_ssa_prep.r", 
+                            f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
+                            n_e_d_shift,
+                            cosi_fp, road_cal_factor])
+
+
+            # Run PDAL IDW for rfl_fp and cosi_fp
+            # ZACH: resolution is 1.0 in laz2dem.py??
+            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
+            cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
+            json_path = join(json_dir, 'temp.json')
+            json_pipeline = {
+                "pipeline": [
+                    rfl_fp,
+                    {
+                        "type":"writers.gdal",
+                    },
+                    {
+                        "filename":rfl_fp_grid,
+                        "resolution":pix_size, 
+                        "output_type":"idw"
+                    }
+                ]
+            }
+
+            with open(json_path,'w') as outfile:
+                json.dump(json_pipeline, outfile, indent = 2)            
+            cl_call(f'pdal pipeline {json_path}', log)      
+            os.remove(json_path)
+
+            json_pipeline = {
+                "pipeline": [
+                    cosi_fp,
+                    {
+                        "type":"writers.gdal",
+                    },
+                    {
+                        "filename":cosi_fp_grid,
+                        "resolution":pix_size, 
+                        "output_type":"idw"
+                    }
+                ]
+            }
+            with open(json_path,'w') as outfile:
+                json.dump(json_pipeline, outfile, indent = 2)
+            cl_call(f'pdal pipeline {json_path}', log)        
+            os.remove(json_path)
+            os.remove(rfl_fp)
+            os.remove(cosi_fp)
+
+            # Prepare inputs needed for SSA raster (this is fast here)
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
             sini_fp = f'{ssa_dir}/{las_name}-sini.tif'
             theta_fp = f'{ssa_dir}/{las_name}-theta.tif'
-            cosi_grid = np.array(gdal.Open(cosi_fp).ReadAsArray())
+            cosi_grid = np.array(gdal.Open(cosi_fp_grid).ReadAsArray())
             ssa_grid = np.ones_like(cosi_grid)
             sini_grid = np.ones_like(cosi_grid)
             sini_grid = np.sin(np.arccos(cosi_grid))
             theta_grid = np.ones_like(cosi_grid)
             theta_grid = np.degrees(np.arccos(-cosi_grid**2 + sini_grid**2 * np.cos(np.radians(180))))
-
-            with rio.open(ssa_fp, 'w', **ras_meta) as dst:
+            ref_raster = rasterio.open(cosi_fp_grid)
+            ras_meta = ref_raster.profile
+            with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
                  dst.write(ssa_grid, 1)
-            with rio.open(sini_fp, 'w', **ras_meta) as dst:
+            with rasterio.open(sini_fp, 'w', **ras_meta) as dst:
                  dst.write(sini_grid, 1)
-            with rio.open(theta_fp, 'w', **ras_meta) as dst:
+            with rasterio.open(theta_fp, 'w', **ras_meta) as dst:
                  dst.write(theta_grid, 1)
-            
             ssa_grid = rio.open_rasterio(ssa_fp, masked=True)
             sini_grid = rio.open_rasterio(sini_fp, masked=True)
-            cosi_grid = rio.open_rasterio(cosi_fp, masked=True)
+            cosi_grid = rio.open_rasterio(cosi_fp_grid, masked=True)
             theta_grid = rio.open_rasterio(theta_fp, masked=True)
-            rfl_grid = rio.open_rasterio(rfl_fp, masked=True)
+            rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
             
-            # TODO: add variables names here / above for readibility 
-            ssa_grid = (6 * ((4 * np.pi * 1.8983928418833426e-06) / (1064*1e-9))) / (917 * (9*(1-0.85)) / (16*1.6) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
+            # Apply ART - assuming all pixels are snow, directly solve SSA (also fast)
+            ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
 
-            # clean it up based on CHM and SD
+            # Then, go back and clean it up based on CHM and SD
             # For this threshold we use chm is less than 2m
             # .. and snow depth is greater than 8cm
-            ssa = ssa.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
-            ssa.rio.to_raster(ssa_fp)     
+            ssa_grid = ssa_grid.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
+            ssa_grid.rio.to_raster(ssa_fp)     
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

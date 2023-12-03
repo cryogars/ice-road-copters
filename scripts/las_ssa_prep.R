@@ -7,6 +7,7 @@ library(terra)
 library(sf)
 library(data.table)
 
+# LOAD ARGS
 args <- commandArgs(trailingOnly = TRUE)
 f <- args[1]
 crs <- args[2]
@@ -17,8 +18,6 @@ rfl_fp <- args[6]
 n_e_d_shift <- args[7]
 cosi_fp <- args[8]
 road_cal_factor <- args[9]
-pix_size <- args[10]
-temp_fp <- args[11]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
@@ -47,6 +46,7 @@ df$X_h <-df$X+1000
 df$Y_h <-df$Y+1000 
 df$Z_h <-df$Z + 15000 
 
+
 # COMPUTE ALL RFL AND INCIDENCE ANGLES
 df <- df %>%
     mutate(
@@ -55,39 +55,28 @@ df <- df %>%
         )
 
 # MAKE NEW TEMP LAS FILES THAT WILL HOLD COSI AND RFL AS THE Z VALUE
-# THEN, I WILL IDW FUNCTION VIA rLIDR PACKAGE.
 lasheader = header_create(las)
-df$Classification <- 2
 df$Z <- df$cosi # put the data into acceptable headers
-df$gpstime <- df$rfl
-write.las(temp_fp,lasheader, df)
+write.las(cosi_fp, lasheader, df)
+
+df$Z <- df$rfl
+write.las(rfl_fp, lasheader, df)
 
 # PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
 n_e_d_shift <- strsplit(n_e_d_shift, ",")
 n_shift <- as.numeric(n_e_d_shift[[1]][1])
 e_shift <- as.numeric(n_e_d_shift[[1]][2])
-#d_shift <- as.numeric(n_e_d_shift[[1]][3])
 
-# First do the cosi
-las <- readLAS(temp_fp)
+# APPLY SHIFT TO COSI
+las <- readLAS(cosi_fp)
 st_crs(las) <- crs
 las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
 las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
-cosi_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
-values(cosi_raster)[values(cosi_raster) < 0] = NA
-pr <- as.polygons(cosi_raster > -Inf)
-pr <- buffer(pr,-300) #BUFFER SIZE HERE is set to 300 [m]. Can be adjusted if needed.
-# This removes the edge of flightline where raster interpolation is poor.
-cosi_raster <- mask(cosi_raster, pr)
-writeRaster(cosi_raster, cosi_fp, overwrite=TRUE)
+writeLAS(las, cosi_fp)
 
-# Now do the rfl
-las@data$Z <- las@data$gpstime
-rfl_raster <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res = pix_size)
-values(rfl_raster)[values(rfl_raster) < 0] = NA
-pr <- as.polygons(rfl_raster > -Inf)
-pr <- buffer(pr,-300) #BUFFER SIZE HERE is set to 300 [m]. Can be adjusted if needed.
-# This removes the edge of flightline where raster interpolation is poor.
-rfl_raster <- mask(rfl_raster, pr)
-writeRaster(rfl_raster, rfl_fp, overwrite=TRUE)
-
+# APPLY SHIFT TO RFL
+las <- readLAS(rfl_fp)
+st_crs(las) <- crs
+las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
+las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
+writeLAS(las, rfl_fp)

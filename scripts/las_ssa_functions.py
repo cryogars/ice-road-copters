@@ -1,6 +1,11 @@
 # Import libraries
 import numpy as np
 
+
+# THIS CAN BE RASTERIZED
+# 
+
+
 def art_ssa(rfl_1064, cos_sza, g=0.85, b=1.6):
     '''
 
@@ -61,14 +66,20 @@ def art_ssa(rfl_1064, cos_sza, g=0.85, b=1.6):
 
     use_2016 = (wls_nm <= wls2016[-1])
     k_ice = np.where(use_2016, r2016_i, r2008_i)
+    print(k_ice)
 
     # r0 - semi-infinite non-absorbing snow layer
-    p = 11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta)
-    r0 = (1.247 + 1.186 * (cos_sza + cos_sza) + 5.157 * cos_sza * cos_sza + p) / 4.0 / (cos_sza + cos_sza)
+    p = (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))
+    r0 = ((1.247 + 1.186 * (cos_sza + cos_sza) + 5.157 * cos_sza * cos_sza + p) / 4.0 / (cos_sza + cos_sza))
     
     # Compute SSA
     eps =  (9*(1-g)) / (16*b)
-    gamma_i = (4 * np.pi * k_ice) / wavelengths
+    gamma_i = ((4 * np.pi * k_ice) / wavelengths)
     ssa = (6 * gamma_i) / (917 * eps * (-np.log(rfl_1064 / r0))**2)
 
     return float(ssa)
+
+art_ssa(5555,0.2)
+
+x=1.8983928418833426e-06
+print(x)

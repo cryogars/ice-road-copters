@@ -274,31 +274,47 @@ if __name__ == '__main__':
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.tif'
             temp_fp = f'{ssa_dir}/{las_name}-temp.las'
-            subprocess.call (["Rscript", 
-                              f"{scripts_dir}/las_ssa_prep.r", 
-                              f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                              n_e_d_shift,
-                              cosi_fp, road_cal_factor,
-                              pix_size, temp_fp])
-            os.remove(temp_fp)
+            if rfl_fp: #for now for testing...
+                pass
+            else:
+                subprocess.call (["Rscript", 
+                                f"{scripts_dir}/las_ssa_prep.r", 
+                                f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
+                                n_e_d_shift,
+                                cosi_fp, road_cal_factor,
+                                pix_size, temp_fp])
+                os.remove(temp_fp)
 
             # estimate SSA for the raster
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
-            rfl_grid = np.array(gdal.Open(rfl_fp).ReadAsArray())
+            sini_fp = f'{ssa_dir}/{las_name}-sini.tif'
+            theta_fp = f'{ssa_dir}/{las_name}-theta.tif'
             cosi_grid = np.array(gdal.Open(cosi_fp).ReadAsArray())
-            ssa_grid = np.empty_like(cosi_grid)
-
-            for i in range(rfl_grid.shape[0]):
-                for j in range(rfl_grid.shape[1]):
-                    ssa_grid[i,j] = art_ssa(rfl_grid[i,j], cosi_grid[i,j])
+            ssa_grid = np.ones_like(cosi_grid)
+            sini_grid = np.ones_like(cosi_grid)
+            sini_grid = np.sin(np.arccos(cosi_grid))
+            theta_grid = np.ones_like(cosi_grid)
+            theta_grid = np.degrees(np.arccos(-cosi_grid**2 + sini_grid**2 * np.cos(np.radians(180))))
 
             with rio.open(ssa_fp, 'w', **ras_meta) as dst:
                  dst.write(ssa_grid, 1)
+            with rio.open(sini_fp, 'w', **ras_meta) as dst:
+                 dst.write(sini_grid, 1)
+            with rio.open(theta_fp, 'w', **ras_meta) as dst:
+                 dst.write(theta_grid, 1)
+            
+            ssa_grid = rio.open_rasterio(ssa_fp, masked=True)
+            sini_grid = rio.open_rasterio(sini_fp, masked=True)
+            cosi_grid = rio.open_rasterio(cosi_fp, masked=True)
+            theta_grid = rio.open_rasterio(theta_fp, masked=True)
+            rfl_grid = rio.open_rasterio(rfl_fp, masked=True)
+            
+            # TODO: add variables names here / above for readibility 
+            ssa_grid = (6 * ((4 * np.pi * 1.8983928418833426e-06) / (1064*1e-9))) / (917 * (9*(1-0.85)) / (16*1.6) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
 
-            # Load back in and now clean it up based on CHM and SD
+            # clean it up based on CHM and SD
             # For this threshold we use chm is less than 2m
             # .. and snow depth is greater than 8cm
-            ssa = rio.open_rasterio(ssa_fp, masked=True)
             ssa = ssa.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
             ssa.rio.to_raster(ssa_fp)     
 

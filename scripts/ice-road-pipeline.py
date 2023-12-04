@@ -274,7 +274,9 @@ if __name__ == '__main__':
             las_name = os.path.splitext(base_las)[0]
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
-
+            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
+            cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
+            
             # Getting a translated "LAS" file
             # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
             # with the intention to do fast IDW in the next step.
@@ -288,8 +290,6 @@ if __name__ == '__main__':
             # Run PDAL IDW for rfl_fp and cosi_fp
             # ZACH: resolution is 1.0 in laz2dem.py??
             # Also, it is still fairly slow... not sure if there are any pdal tricks here to speed things up?
-            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
-            cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
             json_path = join(json_dir, 'temp.json')
             json_pipeline = {
                 "pipeline": [
@@ -352,10 +352,11 @@ if __name__ == '__main__':
                  dst.write(ssa_grid, 1)
 
             # Then, go back and clean it up based on CHM and SD
-            # For this threshold we use chm is less than 2m
+            # For this threshold we use chm is less than 3m
             # .. and snow depth is greater than 8cm
             ssa_grid = rio.open_rasterio(ssa_fp, masked=True) 
-            ssa_grid = ssa_grid.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
+            ssa_grid = ssa_grid.rio.reproject_match(canopyheight)
+            ssa_grid = ssa_grid.where((canopyheight <= 3.0) | (snowdepth >= 0.08))
             ssa_grid.rio.to_raster(ssa_fp)     
 
     end_time = datetime.now()

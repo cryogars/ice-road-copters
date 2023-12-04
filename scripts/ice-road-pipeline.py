@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
 
     # Command for testing...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1384
+    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.142519654
 
     if shp_fp_rfl:
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
 
             # Run PDAL IDW for rfl_fp and cosi_fp
             # ZACH: resolution is 1.0 in laz2dem.py??
-            # Also, can you check this is the right way to run this pipeline..
+            # Also, it is still fairly slow... not sure if there are any pdal tricks here to speed things up?
             rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
             json_path = join(json_dir, 'temp.json')
@@ -357,6 +357,7 @@ if __name__ == '__main__':
             # Then, go back and clean it up based on CHM and SD
             # For this threshold we use chm is less than 2m
             # .. and snow depth is greater than 8cm
+            ssa_grid = ssa_grid.rio.reproject_match(snowdepth)
             ssa_grid = ssa_grid.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
             ssa_grid.rio.to_raster(ssa_fp)     
 

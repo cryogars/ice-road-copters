@@ -43,7 +43,6 @@ import os
 from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
-from las_ssa_functions import art_ssa
 
 if __name__ == '__main__':
     start_time = datetime.now()

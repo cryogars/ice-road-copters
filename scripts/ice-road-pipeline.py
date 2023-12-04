@@ -283,7 +283,8 @@ if __name__ == '__main__':
                             f"{scripts_dir}/las_ssa_prep.r", 
                             f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
                             n_e_d_shift,
-                            cosi_fp, road_cal_factor])
+                            cosi_fp, road_cal_factor,
+                            imu_data])
 
             # Run PDAL IDW for rfl_fp and cosi_fp
             # ZACH: resolution is 1.0 in laz2dem.py??

@@ -18,6 +18,7 @@ rfl_fp <- args[6]
 n_e_d_shift <- args[7]
 cosi_fp <- args[8]
 road_cal_factor <- args[9]
+imu_data <- args[10]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
@@ -41,9 +42,14 @@ df<- filter(df, n_i != "NA")
 
 # PLACEHOLDER FOR HELI IMU DATA
 # I WILL ACTUALLY SYNC WITH GPS TIME HERE
-df$X_h <-df$X+1000
-df$Y_h <-df$Y+1000 
-df$Z_h <-df$Z + 15000 
+# imu <- read_csv(imu_data)
+# names(imu)[names(imu) == 'X?'] <- 'X_h'
+# names(imu)[names(imu) == 'Y?'] <- 'Y_h'
+# names(imu)[names(imu) == 'Z?'] <- 'Z_h'
+# joined_df <- merge(df, imu, by = 'gpstime')
+df$X_h<-df$X+1000 #TEMP - WAITING FOR DATA
+df$Y_h<-df$Y+1000 #TEMP - WAITING FOR DATA
+df$Z_h<-df$Z+15000 #TEMP - WAITING FOR DATA
 
 
 # COMPUTE ALL RFL AND INCIDENCE ANGLES

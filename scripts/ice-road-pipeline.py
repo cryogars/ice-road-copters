@@ -346,6 +346,7 @@ if __name__ == '__main__':
             rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
             
             # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
+            #TODO: fix and run this in array space and save in same fashion as bove "with"
             ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
 
             # Then, go back and clean it up based on CHM and SD

@@ -175,9 +175,8 @@ if __name__ == '__main__':
     canopyheight = matched - snowoff
 
     # mask snow depth from vegetation
-    canopyheight = canopyheight.where((canopyheight > snowon + 0.1) | (snowon.isnull()))
+    canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()))
     canopyheight.rio.to_raster(canopy_fp)
-
 
     ##### START SSA CODE HERE #####
     # due to lidar processing limitations I cannot retain reflectance information using a 
@@ -193,7 +192,7 @@ if __name__ == '__main__':
 
 
     # Command for testing...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.142519654
+    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1955
 
     if shp_fp_rfl:
 

@@ -51,7 +51,6 @@ df$X_h<-df$X+1000 #TEMP - WAITING FOR DATA
 df$Y_h<-df$Y+1000 #TEMP - WAITING FOR DATA
 df$Z_h<-df$Z+15000 #TEMP - WAITING FOR DATA
 
-
 # COMPUTE ALL RFL AND INCIDENCE ANGLES
 df <- df %>%
     mutate(

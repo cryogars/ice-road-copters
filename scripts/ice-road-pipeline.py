@@ -326,6 +326,7 @@ if __name__ == '__main__':
             sini_fp = f'{ssa_dir}/{las_name}-sini.tif'
             theta_fp = f'{ssa_dir}/{las_name}-theta.tif'
             cosi_grid = np.array(gdal.Open(cosi_fp_grid).ReadAsArray())
+            rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
             ssa_grid = np.ones_like(cosi_grid)
             sini_grid = np.ones_like(cosi_grid)
             sini_grid = np.sin(np.arccos(cosi_grid))
@@ -333,26 +334,21 @@ if __name__ == '__main__':
             theta_grid = np.degrees(np.arccos(-cosi_grid**2 + sini_grid**2 * np.cos(np.radians(180))))
             ref_raster = rasterio.open(cosi_fp_grid)
             ras_meta = ref_raster.profile
-            with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
-                 dst.write(ssa_grid, 1)
             with rasterio.open(sini_fp, 'w', **ras_meta) as dst:
                  dst.write(sini_grid, 1)
             with rasterio.open(theta_fp, 'w', **ras_meta) as dst:
                  dst.write(theta_grid, 1)
-            ssa_grid = rio.open_rasterio(ssa_fp, masked=True)
-            sini_grid = rio.open_rasterio(sini_fp, masked=True)
-            cosi_grid = rio.open_rasterio(cosi_fp_grid, masked=True)
-            theta_grid = rio.open_rasterio(theta_fp, masked=True)
-            rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-            
+
             # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
-            #TODO: fix and run this in array space and save in same fashion as bove "with"
             ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
+            
+            with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
+                 dst.write(ssa_grid, 1)
 
             # Then, go back and clean it up based on CHM and SD
             # For this threshold we use chm is less than 2m
             # .. and snow depth is greater than 8cm
-            ssa_grid = ssa_grid.rio.reproject_match(snowdepth)
+            ssa_grid = rio.open_rasterio(ssa_fp, masked=True) 
             ssa_grid = ssa_grid.where((canopyheight <= 2.0) | (snowdepth >= 0.08))
             ssa_grid.rio.to_raster(ssa_fp)     
 

@@ -187,12 +187,6 @@ if __name__ == '__main__':
     # SO, instead  deciding that ASP is ran another time (but with translation-only on)
     # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
 
-    # Additional notes for Zach, bottleneck on speed at this point is the IDW to convert las to .tif
-    # The main issue why this is so slow is that we have to run each flight line independently to keep incidence angle information.
-    # Which you would think would mean a good workflow for running in parallel, however, each flightline needs roughly 64GB RAM to process..
-    # With the 11-12 flightlines we have here, that is a pretty beefy ask for resources..
-
-
     # Command for testing...
     # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.142519654
 

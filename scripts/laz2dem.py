@@ -136,7 +136,7 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
 
     # set up pipeline
     if canopy:
-        pipeline = [reader, first_returns, las_writer]
+        pipeline = [reader, dem_filter, first_returns, las_writer]
     else:
         pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
     # make json dir and fp

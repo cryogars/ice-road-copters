@@ -258,7 +258,8 @@ if __name__ == '__main__':
         output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, crs, shp_fp_rfl, n_e_d_shift, output_csv])
+                          cal_las, crs, shp_fp_rfl, n_e_d_shift, 
+                          output_csv, imu_data])
         
         # Read in cal data and estimate factor
         df = pd.read_csv(output_csv)

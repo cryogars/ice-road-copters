@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
 
     # Command for testing...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/eagle_res_buffered.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1955
+    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1955
 
     if shp_fp_rfl:
 
@@ -348,6 +348,9 @@ if __name__ == '__main__':
             # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
             ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
             
+            # TODO: ADD in a check here to be within 2-156 acceptable range.
+
+            # Write SSA to disk
             with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
                  dst.write(ssa_grid, 1)
 

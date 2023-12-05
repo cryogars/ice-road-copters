@@ -21,7 +21,6 @@ crs <- as.numeric(crs)
 las <- readLAS(cal_las)
 st_crs(las) <- crs
 
-
 # PREP SHIFT
 n_e_d_shift <- strsplit(n_e_d_shift, ",")
 n_shift <- as.numeric(n_e_d_shift[[1]][1])
@@ -36,6 +35,9 @@ las@data$Z <- las@data$Z  - d_shift
 # CLIP TO TARGET
 spdf <- st_read(file.path(shp_fp_rfl))
 las <- clip_roi(las, spdf)
+
+# HARD SET TO TELL RLIDR THESE ARE GROUND POINTS
+las@data$Classification <- 2
 
 # COMPUTE SURFACE NORMALS AND INCLUDE IN LAS
 dtm <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2))

@@ -348,8 +348,10 @@ if __name__ == '__main__':
             # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
             ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
             
-            # TODO: ADD in a check here to be within 2-156 acceptable range.
-
+            # Add in a check here to be within 2-156 acceptable range.
+            ssa_grid[ssa_grid > 156] = -9999
+            ssa_grid[ssa_grid < 2] = -9999
+            
             # Write SSA to disk
             with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
                  dst.write(ssa_grid, 1)

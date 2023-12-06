@@ -6,6 +6,7 @@ library(readr)
 library(terra)
 library(sf)
 library(data.table)
+options(digits = 22)
 
 #LOAD ARGS
 args <- commandArgs(trailingOnly = TRUE)
@@ -28,6 +29,7 @@ e_shift <- as.numeric(n_e_d_shift[[1]][2])
 d_shift <- as.numeric(n_e_d_shift[[1]][3])
 
 # SHIFT X, Y, and Z based on ASP PC_ALIGN
+# NOTE: TRANSLATION IS APPLIED FIRST HERE IN ORDER TO CLIP TO ROI IN REAL WORLD COORD.
 las@data$X <- las@data$X  + e_shift
 las@data$Y <- las@data$Y  + n_shift
 las@data$Z <- las@data$Z  - d_shift
@@ -53,17 +55,35 @@ las <- merge_spatial(las, z, attribute = "n_k")
 # GET AS DATATABLE
 df <- payload(las)
 
-# PLACEHOLDER FOR HELI IMU DATA
-# I WILL ACTUALLY SYNC WITH GPS TIME HERE
-# imu <- read_csv(imu_data)
-# names(imu)[names(imu) == 'X?'] <- 'X_h'
-# names(imu)[names(imu) == 'Y?'] <- 'Y_h'
-# names(imu)[names(imu) == 'Z?'] <- 'Z_h'
-# joined_df <- merge(df, imu, by = 'gpstime')
-df$X_h<-df$X+1000 #INCLUDE SHIFT HERE
-df$Y_h<-df$Y+1000 #INCLUDE SHIFT HERE
-df$Z_h<-df$Z+15000 #INCLUDE SHIFT HERE
+# HELI IMU DATA
+imu <- read_csv(imu_data,show_col_types = FALSE)
+imu <- as.data.table(imu, TRUE) 
 
+#REDUCE THE NUMBER OF ROWS FOR JOIN
+max_time <- max(df$gpstime, na.rm = TRUE)
+min_time <- min(df$gpstime, na.rm = TRUE)
+
+# SET COL NAMES FOR JOIN
+names(imu)[names(imu) == 'Easting[m]'] <- 'X_h'
+names(imu)[names(imu) == 'Northing[m]'] <- 'Y_h'
+names(imu)[names(imu) == 'Height[m]'] <- 'Z_h'
+names(imu)[names(imu) == 'Time[s]'] <- 'gpstime'
+
+# APPLY FILTER TO INCREASE SPEED
+imu <- filter(imu, gpstime >= min_time)
+imu <- filter(imu, gpstime <= max_time)
+
+# SET KEYS FOR JOIN
+setkey(df,gpstime)
+setkey(imu,gpstime)
+
+# JOIN BY NEAREST
+df <- imu[df,roll = "nearest"]
+
+# APPLY ASP PC-ALIGN TRANSLATION
+df$X_h <- df$X + e_shift 
+df$Y_h <- df$Y + n_shift 
+df$Z_h <- df$Z - d_shift 
 
 # COMPUTE RFL (NORMALIZED BY INC ANGLE)
 df <- df %>%

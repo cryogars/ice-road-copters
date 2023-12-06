@@ -13,7 +13,8 @@ Options:
     -r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
                      "Intensity as Reflectance" returned by RIEGL.
-    -i imu_data      path to helicopter IMU .CSV data used to match data with point cloud using GPS time. 
+    -i imu_data      path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
+                     Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
     -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
     -k known_rfl     Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
@@ -192,7 +193,7 @@ if __name__ == '__main__':
 
 
     # Command for testing...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -i /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1955
+    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -i /Users/brent/Documents/MCS/LIDAR/IMU/20230209_MCS_precise_scanner_bw.txt -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1956
 
     if shp_fp_rfl:
 

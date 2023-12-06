@@ -6,6 +6,7 @@ library(readr)
 library(terra)
 library(sf)
 library(data.table)
+options(digits = 22)
 
 # LOAD ARGS
 args <- commandArgs(trailingOnly = TRUE)
@@ -40,18 +41,33 @@ df<- filter(df, NumberOfReturns == 1)
 df<- filter(df, ReturnNumber == 1)
 df<- filter(df, n_i != "NA")
 
-# PLACEHOLDER FOR HELI IMU DATA
-# I WILL ACTUALLY SYNC WITH GPS TIME HERE
-# imu <- read_csv(imu_data)
-# names(imu)[names(imu) == 'X?'] <- 'X_h'
-# names(imu)[names(imu) == 'Y?'] <- 'Y_h'
-# names(imu)[names(imu) == 'Z?'] <- 'Z_h'
-# joined_df <- merge(df, imu, by = 'gpstime')
-df$X_h<-df$X+1000 #TEMP - WAITING FOR DATA
-df$Y_h<-df$Y+1000 #TEMP - WAITING FOR DATA
-df$Z_h<-df$Z+15000 #TEMP - WAITING FOR DATA
+# HELI IMU DATA
+imu <- read_csv(imu_data,show_col_types = FALSE)
+imu <- as.data.table(imu, TRUE) 
+
+#REDUCE THE NUMBER OF ROWS FOR JOIN
+max_time <- max(df$gpstime, na.rm = TRUE)
+min_time <- min(df$gpstime, na.rm = TRUE)
+
+# SET COL NAMES FOR JOIN
+names(imu)[names(imu) == 'Easting[m]'] <- 'X_h'
+names(imu)[names(imu) == 'Northing[m]'] <- 'Y_h'
+names(imu)[names(imu) == 'Height[m]'] <- 'Z_h'
+names(imu)[names(imu) == 'Time[s]'] <- 'gpstime'
+
+# APPLY FILTER TO INCREASE SPEED
+imu <- filter(imu, gpstime >= min_time)
+imu <- filter(imu, gpstime <= max_time)
+
+# SET KEYS FOR JOIN
+setkey(df,gpstime)
+setkey(imu,gpstime)
+
+# JOIN BY NEAREST
+df <- imu[df,roll = "nearest"]
 
 # COMPUTE ALL RFL AND INCIDENCE ANGLES
+# NOTE: TRANSLATION IS APPLIED AFTER HERE, KEEPING HELI AND GROUND POINTS IN SAME REFERENCE FRAME
 df <- df %>%
     mutate(
       cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)) , 

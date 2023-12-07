@@ -204,10 +204,6 @@ if __name__ == '__main__':
         g = 0.85
         b = 1.6
 
-        # make dir for looping before R code
-        # R creates .DS_Store in_dir which is confusing...
-        list_dir = os.listdir(in_dir)
-
         # MAKE SURE R IS INSTALLED HERE
         proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
         exit_code = proc.wait()
@@ -272,8 +268,8 @@ if __name__ == '__main__':
         road_cal_factor = str(road_cal_factor) #convert to str for R
 
         # For each file in <in-dir> 
-        for f in list_dir:
-
+        for f in os.listdir(in_dir):
+            
             # Set names
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
@@ -285,6 +281,11 @@ if __name__ == '__main__':
             # Check to make sure doesn't already exist
             if os.path.exists(f'{ssa_dir}/{las_name}-ssa.tif'):
                 continue
+
+            # R is making a .DS_Store in in_dir, and I can't figure out how or where...
+            # So this will be just a quick check to continue to next iter if encountered.
+            if las_name == ".DS_Store":
+                continue 
 
             # Getting a translated "LAS" file
             # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"

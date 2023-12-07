@@ -284,7 +284,7 @@ if __name__ == '__main__':
 
             # R is making a .DS_Store in in_dir, and I can't figure out how or where...
             # So this will be just a quick check to continue to next iter if encountered.
-            if las_name == ".DS_Store":
+            if las_name == ".DS_Store" or las_name == "ice-road":
                 continue 
 
             # Getting a translated "LAS" file

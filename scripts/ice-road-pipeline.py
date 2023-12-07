@@ -204,6 +204,10 @@ if __name__ == '__main__':
         g = 0.85
         b = 1.6
 
+        # make dir for looping before R code
+        # R creates .DS_Store in_dir which is confusing...
+        list_dir = os.listdir(in_dir)
+
         # MAKE SURE R IS INSTALLED HERE
         proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
         exit_code = proc.wait()
@@ -268,7 +272,6 @@ if __name__ == '__main__':
         road_cal_factor = str(road_cal_factor) #convert to str for R
 
         # For each file in <in-dir> 
-        list_dir = os.listdir(in_dir)
         for f in list_dir:
 
             # Set names

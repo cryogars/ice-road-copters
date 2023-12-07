@@ -268,16 +268,21 @@ if __name__ == '__main__':
         road_cal_factor = str(road_cal_factor) #convert to str for R
 
         # For each file in <in-dir> 
-        for f in os.listdir(in_dir):
+        list_dir = os.listdir(in_dir)
+        for f in list_dir:
 
-            # Rasterize calibrated reflectance and incidence angle
+            # Set names
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
             rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
             cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
-            
+
+            # Check to make sure doesn't already exist
+            if os.path.exists(f'{ssa_dir}/{las_name}-ssa.tif'):
+                continue
+
             # Getting a translated "LAS" file
             # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
             # with the intention to do fast IDW in the next step.

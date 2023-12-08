@@ -27,6 +27,17 @@ road_cal_factor <- as.numeric(road_cal_factor)
 las <- readLAS(f)
 st_crs(las) <- crs
 
+# PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
+n_e_d_shift <- strsplit(n_e_d_shift, ",")
+n_shift <- as.numeric(n_e_d_shift[[1]][1])
+e_shift <- as.numeric(n_e_d_shift[[1]][2])
+d_shift <- as.numeric(n_e_d_shift[[1]][3])
+
+# APPLY SHIFT
+las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
+las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
+las@data$Z <- las@data$Z - d_shift # ASP shift applied here (D)
+
 # MERGE INFORMATION INTO LAS
 x <- raster(ni_fp)
 y <- raster(nj_fp)
@@ -66,6 +77,11 @@ setkey(imu,gpstime)
 # JOIN BY NEAREST
 df <- imu[df,roll = "nearest"]
 
+# APPLY ASP SHIFT TO HELI POSITION
+df$X_h <- df$X_h + e_shift # ASP shift applied here (E)
+df$Y_h <- df$Y_h + n_shift # ASP shift applied here (N)
+df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
+
 # COMPUTE ALL RFL AND INCIDENCE ANGLES
 # NOTE: TRANSLATION IS APPLIED AFTER HERE, KEEPING HELI AND GROUND POINTS IN SAME REFERENCE FRAME
 df <- df %>%
@@ -81,22 +97,3 @@ write.las(cosi_fp, lasheader, df)
 
 df$Z <- df$rfl
 write.las(rfl_fp, lasheader, df)
-
-# PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
-n_e_d_shift <- strsplit(n_e_d_shift, ",")
-n_shift <- as.numeric(n_e_d_shift[[1]][1])
-e_shift <- as.numeric(n_e_d_shift[[1]][2])
-
-# APPLY SHIFT TO COSI
-las <- readLAS(cosi_fp)
-st_crs(las) <- crs
-las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
-las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
-writeLAS(las, cosi_fp)
-
-# APPLY SHIFT TO RFL
-las <- readLAS(rfl_fp)
-st_crs(las) <- crs
-las@data$X <- las@data$X + e_shift # ASP shift applied here (E)
-las@data$Y <- las@data$Y + n_shift # ASP shift applied here (N)
-writeLAS(las, rfl_fp)

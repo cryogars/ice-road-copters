@@ -267,84 +267,69 @@ if __name__ == '__main__':
         road_cal_factor = known_rfl / median_rfl
         road_cal_factor = str(road_cal_factor) #convert to str for R
 
-        # For each file in <in-dir> 
-        for f in os.listdir(in_dir):
-            
-            # Set names
-            base_las = os.path.basename(f)
-            las_name = os.path.splitext(base_las)[0]
-            rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
-            cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
-            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
+        # Set names
+        rfl_fp = f'{ssa_dir}/rfl.las'
+        rfl_fp_grid = f'{ssa_dir}/rfl.tif'
+        ssa_fp_grid = f'{ssa_dir}/ssa.tif'
 
-            # Check to make sure doesn't already exist
-            if os.path.exists(f'{ssa_dir}/{las_name}-ssa.tif'):
-                continue
+        # Getting a translated "LAS" file
+        # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
+        # with the intention to do fast IDW in the next step.
+        subprocess.call(["Rscript", 
+                        f"{scripts_dir}/las_ssa_prep.r", 
+                        f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
+                        n_e_d_shift,
+                        road_cal_factor,
+                        imu_data])
 
-            # R is making a .DS_Store in in_dir, and I can't figure out how or where...
-            # So this will be just a quick check to continue to next iter if encountered.
-            if las_name == ".DS_Store" or las_name == "ice-road":
-                continue 
+        # Run PDAL IDW for rfl_fp and cosi_fp
+        # ZACH: resolution is 1.0 in laz2dem.py??
+        json_path = join(json_dir, 'temp.json')
+        json_pipeline = {
+            "pipeline": [
+                rfl_fp,
+                {
+                    "type":"writers.gdal",
+                    "filename":rfl_fp_grid,
+                    "resolution":pix_size, 
+                    "output_type":"idw"
+                }
+            ]
+        }
 
-            # Getting a translated "LAS" file
-            # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
-            # with the intention to do fast IDW in the next step.
-            subprocess.call(["Rscript", 
-                            f"{scripts_dir}/las_ssa_prep.r", 
-                            f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                            n_e_d_shift,
-                            road_cal_factor,
-                            imu_data])
+        with open(json_path,'w') as outfile:
+            json.dump(json_pipeline, outfile, indent = 2)            
+        cl_call(f'pdal pipeline {json_path}', log)      
+        os.remove(json_path)
+        os.remove(rfl_fp)
 
-            # Run PDAL IDW for rfl_fp and cosi_fp
-            # ZACH: resolution is 1.0 in laz2dem.py??
-            json_path = join(json_dir, 'temp.json')
-            json_pipeline = {
-                "pipeline": [
-                    rfl_fp,
-                    {
-                        "type":"writers.gdal",
-                        "filename":rfl_fp_grid,
-                        "resolution":pix_size, 
-                        "output_type":"idw"
-                    }
-                ]
-            }
+        # Prepare inputs needed for SSA raster (vectorized operation)
+        # theta_grid = 180 (perfect backscatter relative to sensor)
+        rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
+        ssa_grid = np.ones_like(rfl_grid)
+        theta = 180 
+        ref_raster = rasterio.open(rfl_fp_grid)
+        ras_meta = ref_raster.profile
+        cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R
 
-            with open(json_path,'w') as outfile:
-                json.dump(json_pipeline, outfile, indent = 2)            
-            cl_call(f'pdal pipeline {json_path}', log)      
-            os.remove(json_path)
-            os.remove(rfl_fp)
+        # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
+        ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
+        
+        # Add in a check here to be within 2-156 acceptable range.
+        ssa_grid[ssa_grid > 156] = -9999
+        ssa_grid[ssa_grid < 2] = -9999
+        
+        # Write SSA to disk
+        with rasterio.open(ssa_fp_grid, 'w', **ras_meta) as dst:
+                dst.write(ssa_grid, 1)
 
-            # Prepare inputs needed for SSA raster (vectorized operation)
-            # theta_grid = 180 (perfect backscatter relative to sensor)
-            ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
-            rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
-            ssa_grid = np.ones_like(rfl_grid)
-            theta = 180 # based on data it is almost always 
-            ref_raster = rasterio.open(rfl_fp_grid)
-            ras_meta = ref_raster.profile
-            cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R
-
-            # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
-            ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
-            
-            # Add in a check here to be within 2-156 acceptable range.
-            ssa_grid[ssa_grid > 156] = -9999
-            ssa_grid[ssa_grid < 2] = -9999
-            
-            # Write SSA to disk
-            with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
-                 dst.write(ssa_grid, 1)
-
-            # Then, go back and clean it up based on CHM and SD
-            # For this threshold we use chm is less than 3m
-            # .. and snow depth is greater than 8cm
-            ssa_grid = rio.open_rasterio(ssa_fp, masked=True) 
-            ssa_grid = ssa_grid.rio.reproject_match(canopyheight)
-            ssa_grid = ssa_grid.where((canopyheight <= 3.0) | (snowdepth >= 0.08))
-            ssa_grid.rio.to_raster(ssa_fp)     
+        # Then, go back and clean it up based on CHM and SD
+        # For this threshold we use chm is less than 3m
+        # .. and snow depth is greater than 8cm
+        ssa_grid = rio.open_rasterio(ssa_fp_grid, masked=True) 
+        ssa_grid = ssa_grid.rio.reproject_match(canopyheight)
+        ssa_grid = ssa_grid.where((canopyheight <= 3.0) | (snowdepth >= 0.08))
+        ssa_grid.rio.to_raster(ssa_fp_grid)     
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

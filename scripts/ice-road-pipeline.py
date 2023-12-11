@@ -264,28 +264,32 @@ if __name__ == '__main__':
         # For each file in <in-dir> 
         inp_list =[]
         for f in os.listdir(in_dir):
-            
+             
             # Set names
             base_las = os.path.basename(f)
             las_name = os.path.splitext(base_las)[0]
-            rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
-            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
 
             # R is making a .DS_Store in in_dir, and I can't figure out how or where...
             # So this will be just a quick check to continue to next iter if encountered.
             if las_name == ".DS_Store" or las_name == "ice-road":
                 continue 
 
+            rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
+            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
+            inp_list.append(rfl_fp)
+
             # Getting a translated "LAS" file
-            # "LAS" in quotations bc I am hiding the cosi and rfl here in "Z"
+            # "LAS" in quotations bc I am hiding the rfl here in "Z"
             # with the intention to do fast IDW in the next step.
-            subprocess.call(["Rscript", 
-                            f"{scripts_dir}/las_ssa_prep.r", 
-                            f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                            n_e_d_shift,
-                            road_cal_factor,
-                            imu_data])
-            inp_list = inp_list.append(rfl_fp)
+            if os.path.exists(rfl_fp):
+                pass
+            else:
+                subprocess.call(["Rscript", 
+                                f"{scripts_dir}/las_ssa_prep.r", 
+                                f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
+                                n_e_d_shift,
+                                road_cal_factor,
+                                imu_data])
 
         rfl_fp = f'{ssa_dir}/rfl-merged.las'
 
@@ -314,7 +318,7 @@ if __name__ == '__main__':
         ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
         rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
         ssa_grid = np.ones_like(rfl_grid)
-        theta = 180 # based on data it is almost always 
+        theta = 180 # based on data it is almost always 179-180
         ref_raster = rasterio.open(rfl_fp_grid)
         ras_meta = ref_raster.profile
         cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R

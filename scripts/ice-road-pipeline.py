@@ -274,7 +274,6 @@ if __name__ == '__main__':
                 continue 
 
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
-            rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
 
             # Getting a translated "LAS" file
             # "LAS" in quotations bc I am hiding the rfl here in "Z"
@@ -291,6 +290,7 @@ if __name__ == '__main__':
 
         
         rfl_fp = f'{ssa_dir}/rfl-merged.las'
+        rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
 
         # Run PDAL IDW for rfl_fp and cosi_fp
         # ZACH: resolution is 1.0 in laz2dem.py??

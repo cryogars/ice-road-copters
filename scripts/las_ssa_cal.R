@@ -16,9 +16,11 @@ shp_fp_rfl <- args[3]
 n_e_d_shift <- args[4]
 output_csv <- args[5]
 imu_data <- args[6]
+pix_size <- args[7]
 
 # LOAD CAL LAS
 crs <- as.numeric(crs)
+pix_size <- as.numeric(pix_size)
 las <- readLAS(cal_las)
 st_crs(las) <- crs
 
@@ -42,7 +44,7 @@ las <- clip_roi(las, spdf)
 las@data$Classification <- 2
 
 # COMPUTE SURFACE NORMALS AND INCLUDE IN LAS
-dtm <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2))
+dtm <- rasterize_terrain(las, algorithm = knnidw(k = 10L, p = 2), res=pix_size)
 slope <- terrain(dtm, v = c("slope"), unit = "radians")
 aspect <- terrain(dtm, v = c("aspect"), unit = "radians")
 x <- sin(aspect) * sin(slope)

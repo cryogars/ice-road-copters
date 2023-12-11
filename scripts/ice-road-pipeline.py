@@ -253,7 +253,7 @@ if __name__ == '__main__':
         subprocess.call(["Rscript", 
                           f"{scripts_dir}/las_ssa_cal.r", 
                           cal_las, crs, shp_fp_rfl, n_e_d_shift, 
-                          output_csv, imu_data])
+                          output_csv, imu_data, str(pix_size)])
         
         # Read in cal data and estimate factor
         df = pd.read_csv(output_csv)
@@ -262,7 +262,6 @@ if __name__ == '__main__':
         road_cal_factor = str(road_cal_factor) #convert to str for R
 
         # For each file in <in-dir> 
-        inp_list =[]
         for f in os.listdir(in_dir):
              
             # Set names
@@ -276,7 +275,6 @@ if __name__ == '__main__':
 
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
             rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
-            inp_list.append(rfl_fp)
 
             # Getting a translated "LAS" file
             # "LAS" in quotations bc I am hiding the rfl here in "Z"
@@ -291,6 +289,7 @@ if __name__ == '__main__':
                                 road_cal_factor,
                                 imu_data])
 
+        
         rfl_fp = f'{ssa_dir}/rfl-merged.las'
 
         # Run PDAL IDW for rfl_fp and cosi_fp
@@ -309,8 +308,11 @@ if __name__ == '__main__':
         }
 
         with open(json_path,'w') as outfile:
-            json.dump(json_pipeline, outfile, indent = 2)     
-        cl_call(f'pdal merge {inp_list} {rfl_fp}', log)       
+            json.dump(json_pipeline, outfile, indent = 2) 
+
+        inp_str = ' '.join(glob(join(ssa_dir, '*.las')))
+
+        cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
         cl_call(f'pdal pipeline {json_path}', log)      
 
         # Prepare inputs needed for SSA raster (vectorized operation)

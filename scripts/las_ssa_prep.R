@@ -17,9 +17,8 @@ nj_fp <- args[4]
 nk_fp <- args[5]
 rfl_fp <- args[6]
 n_e_d_shift <- args[7]
-cosi_fp <- args[8]
-road_cal_factor <- args[9]
-imu_data <- args[10]
+road_cal_factor <- args[8]
+imu_data <- args[9]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
@@ -87,13 +86,11 @@ df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
 df <- df %>%
     mutate(
       cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)) , 
-      rfl = 10^(Reflectance/10) * road_cal_factor
+      rfl = (10^(Reflectance/10) * road_cal_factor) / cosi
         )
 
-# MAKE NEW TEMP LAS FILES THAT WILL HOLD COSI AND RFL AS THE Z VALUE
+# MAKE NEW TEMP LAS FILE - RFL AS THE Z VALUE
 lasheader = header_create(las)
-df$Z <- df$cosi # put the data into acceptable headers
-write.las(cosi_fp, lasheader, df)
 
 df$Z <- df$rfl
 write.las(rfl_fp, lasheader, df)

@@ -276,7 +276,6 @@ if __name__ == '__main__':
             rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
             cosi_fp = f'{ssa_dir}/{las_name}-cosi.las'
             rfl_fp_grid = f'{ssa_dir}/{las_name}-rfl.tif'
-            cosi_fp_grid = f'{ssa_dir}/{las_name}-cosi.tif'
 
             # Check to make sure doesn't already exist
             if os.path.exists(f'{ssa_dir}/{las_name}-ssa.tif'):
@@ -294,12 +293,11 @@ if __name__ == '__main__':
                             f"{scripts_dir}/las_ssa_prep.r", 
                             f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
                             n_e_d_shift,
-                            cosi_fp, road_cal_factor,
+                            road_cal_factor,
                             imu_data])
 
             # Run PDAL IDW for rfl_fp and cosi_fp
             # ZACH: resolution is 1.0 in laz2dem.py??
-            # Also, it is still fairly slow... not sure if there are any pdal tricks here to speed things up?
             json_path = join(json_dir, 'temp.json')
             json_pipeline = {
                 "pipeline": [
@@ -317,46 +315,20 @@ if __name__ == '__main__':
                 json.dump(json_pipeline, outfile, indent = 2)            
             cl_call(f'pdal pipeline {json_path}', log)      
             os.remove(json_path)
-
-            # Running again for the incidence angle...
-            json_pipeline = {
-                "pipeline": [
-                    cosi_fp,
-                    {
-                        "type":"writers.gdal",
-                        "filename":cosi_fp_grid,
-                        "resolution":pix_size, 
-                        "output_type":"idw"
-                    }
-                ]
-            }
-            with open(json_path,'w') as outfile:
-                json.dump(json_pipeline, outfile, indent = 2)
-            cl_call(f'pdal pipeline {json_path}', log)        
-            os.remove(json_path)
             os.remove(rfl_fp)
-            os.remove(cosi_fp)
 
             # Prepare inputs needed for SSA raster (vectorized operation)
+            # theta_grid = 180 (perfect backscatter relative to sensor)
             ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
-            sini_fp = f'{ssa_dir}/{las_name}-sini.tif'
-            theta_fp = f'{ssa_dir}/{las_name}-theta.tif'
-            cosi_grid = np.array(gdal.Open(cosi_fp_grid).ReadAsArray())
             rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
-            ssa_grid = np.ones_like(cosi_grid)
-            sini_grid = np.ones_like(cosi_grid)
-            sini_grid = np.sin(np.arccos(cosi_grid))
-            theta_grid = np.ones_like(cosi_grid)
-            theta_grid = np.degrees(np.arccos(-cosi_grid**2 + sini_grid**2 * np.cos(np.radians(180))))
-            ref_raster = rasterio.open(cosi_fp_grid)
+            ssa_grid = np.ones_like(rfl_grid)
+            theta = 180 # based on data it is almost always 
+            ref_raster = rasterio.open(rfl_fp_grid)
             ras_meta = ref_raster.profile
-            with rasterio.open(sini_fp, 'w', **ras_meta) as dst:
-                 dst.write(sini_grid, 1)
-            with rasterio.open(theta_fp, 'w', **ras_meta) as dst:
-                 dst.write(theta_grid, 1)
+            cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R
 
             # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
-            ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi_grid + cosi_grid) + 5.157 * cosi_grid * cosi_grid + (11.1 * np.exp(-0.087 * theta_grid) + 1.1 * np.exp(-0.014 * theta_grid))) / 4.0 / (cosi_grid + cosi_grid))))**2)
+            ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
             
             # Add in a check here to be within 2-156 acceptable range.
             ssa_grid[ssa_grid > 156] = -9999

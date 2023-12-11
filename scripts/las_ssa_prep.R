@@ -23,7 +23,7 @@ imu_data <- args[9]
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
 road_cal_factor <- as.numeric(road_cal_factor)
-las <- readLAScatalog(f)
+las <- readLAS(f)
 st_crs(las) <- crs
 
 # PREP SHIFT X, Y (ignore Z) ARGS BASED ON ASP PC_ALIGN
@@ -47,9 +47,9 @@ las <- merge_spatial(las, z, attribute = "n_k")
 
 # CONVERT TO DF. FILTER OUT NA AND SELECT ONLY FIRST RETURNS.
 df <- payload(las)
-df <- filter(df, NumberOfReturns == 1)
-df <- filter(df, ReturnNumber == 1)
-df <- filter(df, n_i != "NA")
+df<- filter(df, NumberOfReturns == 1)
+df<- filter(df, ReturnNumber == 1)
+df<- filter(df, n_i != "NA")
 
 # HELI IMU DATA
 imu <- read_csv(imu_data,show_col_types = FALSE)
@@ -84,10 +84,10 @@ df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
 # COMPUTE RFL
 df <- df %>%
     mutate(
-      rfl = (10^(Reflectance/10) * road_cal_factor) / ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2))
+      rfl = (10^(Reflectance/10) * road_cal_factor) / (((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)))
         )
 
-# MAKE NEW TEMP LAS FILE - RFL AS THE Z VALUE
+# MAKE NEW TEMP LAS FILE THAT HOLD RFL AS THE Z VALUE
 lasheader = header_create(las)
 
 df$Z <- df$rfl

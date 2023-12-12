@@ -91,6 +91,10 @@ df <- df %>%
 # REMOVE COSI < 0.50 (EMPIRICAL/SENS)
 df <- filter(df, cosi>=0.50)
 
+# REMOVE RFL> 1 or less than 0
+df <- filter(df, rfl>=0.0)
+df <- filter(df, rfl<=1.0)
+
 # MAKE NEW TEMP LAS FILE THAT HOLD RFL AS THE Z VALUE
 lasheader = header_create(las)
 df$Z <- df$rfl

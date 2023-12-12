@@ -324,7 +324,7 @@ if __name__ == '__main__':
 
         # Prepare inputs needed for SSA raster (vectorized operation)
         # theta_grid = 180 (perfect backscatter relative to sensor)
-        ssa_fp = f'{ssa_dir}/{las_name}-ssa.tif'
+        ssa_fp = f'{ssa_dir}/ssa.tif'
         rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
         ssa_grid = np.ones_like(rfl_grid)
         theta = 180 # based on data it is almost always 179-180

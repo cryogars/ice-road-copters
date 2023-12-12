@@ -28,6 +28,7 @@ from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
 import rioxarray as rio
 import rasterio
+from rasterio.crs import CRS
 from osgeo import gdal
 import numpy as np
 import pandas as pd
@@ -312,8 +313,14 @@ if __name__ == '__main__':
 
         inp_str = ' '.join(glob(join(ssa_dir, '*.las')))
 
-        cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
-        cl_call(f'pdal pipeline {json_path}', log)      
+        if os.path.exists(rfl_fp_grid):
+            pass    
+        else:
+            cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
+            cl_call(f'pdal pipeline {json_path}', log)     
+
+        with rasterio.open(rfl_fp_grid, "r+")as rds:
+            rds.crs = CRS.from_epsg(crs)
 
         # Prepare inputs needed for SSA raster (vectorized operation)
         # theta_grid = 180 (perfect backscatter relative to sensor)

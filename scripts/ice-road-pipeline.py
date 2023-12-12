@@ -176,30 +176,15 @@ if __name__ == '__main__':
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
 
-    # mask snow depth from vegetation
-    canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()))
+    # mask snow depth from vegetation (null=0)
+    canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()), other=0)
     canopyheight.rio.to_raster(canopy_fp)
-
-    ##### START SSA CODE HERE #####
-    # due to lidar processing limitations I cannot retain reflectance information using a 
-    # transformation. I tested using ASP pc-align and PDAL transformation. Both of these methods
-    # I lose the RIEGL reflectance data...
-    # SO, instead  deciding that ASP is ran another time (but with translation-only on, see `laz_align.py`)
-    # And then, we supply X, Y, and Z translation directly to the LAS in lidR package.
-    ## As a note, this latest version JRR dev of lidR has stated that the code automatically quantizes the 
-    ## updated X,Y,Z information into the header, which should hopefully allow for safe translation, especially considering 
-    ## translations are relatively small to the original X,Y,Z. See this thread for more: https://gis.stackexchange.com/questions/360247/rescaling-and-reoffsetting-a-point-cloud-with-lidr
-    ## Similar to this exchange, I was also having issues when running tin(), due to the integers in Delaunay triangulation.
-    ## However, I ultimately went with PDAL IDW to allow for multithreading, so there is some back-and-forth between Python<-R->Python..
-
 
     # Command for testing...
     # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -i /Users/brent/Documents/MCS/LIDAR/IMU/20230209_MCS_precise_scanner_bw.txt -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1956
-
     if shp_fp_rfl:
 
-
-        # MAKE SURE R IS INSTALLED HERE
+        # Make sure R is installed
         proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
         exit_code = proc.wait()
         if exit_code != 0:
@@ -293,8 +278,8 @@ if __name__ == '__main__':
         rfl_fp = f'{ssa_dir}/rfl-merged.las'
         rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
 
-        # Run PDAL IDW for rfl_fp and cosi_fp
-        # ZACH: resolution is 1.0 in laz2dem.py??
+        # Prep PDAL commands
+        #   ZACH: resolution is 1.0 in laz2dem.py??
         json_path = join(json_dir, 'combine-rfl.json')
         json_pipeline = {
             "pipeline": [
@@ -307,29 +292,24 @@ if __name__ == '__main__':
                 }
             ]
         }
-
         with open(json_path,'w') as outfile:
             json.dump(json_pipeline, outfile, indent = 2) 
 
+        # Run PDAL commands
         inp_str = ' '.join(glob(join(ssa_dir, '*.las')))
-
         if os.path.exists(rfl_fp_grid):
             pass    
         else:
             cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
             cl_call(f'pdal pipeline {json_path}', log)     
 
-        with rasterio.open(rfl_fp_grid, "r+")as rds:
-            rds.crs = CRS.from_epsg(crs)
-
         # Prepare inputs needed for SSA raster (vectorized operation)
         # theta_grid = 180 (perfect backscatter relative to sensor)
         ssa_fp = f'{ssa_dir}/ssa.tif'
-        rfl_grid = np.array(gdal.Open(rfl_fp_grid).ReadAsArray())
-        ssa_grid = np.ones_like(rfl_grid)
+        rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
+        rfl_grid = rfl_grid.rio.reproject_match(snowoff)
+        ssa_grid = rfl_grid.copy()
         theta = 180 # based on data it is almost always 179-180
-        ref_raster = rasterio.open(rfl_fp_grid)
-        ras_meta = ref_raster.profile
         cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R
 
         # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
@@ -339,22 +319,15 @@ if __name__ == '__main__':
         g = 0.85
         b = 1.6
         ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
-        
-        # Add in a check here to be within 2-156 acceptable range.
-        ssa_grid[ssa_grid > 156] = -9999
-        ssa_grid[ssa_grid < 2] = -9999
-        
-        # Write SSA to disk
-        with rasterio.open(ssa_fp, 'w', **ras_meta) as dst:
-                dst.write(ssa_grid, 1)
 
-        # Then, go back and clean it up based on CHM and SD
-        # For this threshold we use chm is less than 3m
-        # .. and snow depth is greater than 8cm
-        ssa_grid = rio.open_rasterio(ssa_fp, masked=True) 
-        ssa_grid = ssa_grid.rio.reproject_match(canopyheight)
-        ssa_grid = ssa_grid.where((canopyheight <= 3.0) | (snowdepth >= 0.08))
-        ssa_grid.rio.to_raster(ssa_fp)     
+        # Set threshold for snow depth and canopy height
+        # .. this is a little clunky but was having issues getting it mask both in one line..
+        ssamask = canopyheight.rio.reproject_match(ssa_grid)
+        snowdepth = snowdepth.rio.reproject_match(ssa_grid)
+        ssamask = ssamask.where(ssamask <= 3, -100)
+        ssa_grid = ssa_grid.where(ssamask != -100)
+        ssa_grid = ssa_grid.where(snowdepth >= 0.08)
+        ssa_grid.rio.to_raster(ssa_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

@@ -84,11 +84,14 @@ df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
 # COMPUTE RFL
 df <- df %>%
     mutate(
-      rfl = (10^(Reflectance/10) * road_cal_factor) / (((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)))
+      cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2))
+      rfl = (10^(Reflectance/10) * road_cal_factor) / cosi
         )
+
+# REMOVE COSI < 0.50 (EMPIRICAL/SENS)
+df <- filter(df, cosi>=0.50)
 
 # MAKE NEW TEMP LAS FILE THAT HOLD RFL AS THE Z VALUE
 lasheader = header_create(las)
-
 df$Z <- df$rfl
 write.las(rfl_fp, lasheader, df)

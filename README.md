@@ -20,21 +20,6 @@ $ conda activate iceroad
 ```
 
 
-#### Install R and the following packages 
-
-```
-library(raster)
-library(lidR)
-library(rlas)
-library(dplyr)
-library(readr)
-library(terra)
-library(sf)
-library(data.table)
-
-```
-
-
 #### Running the code
 from the ice-road-copters directory for example one can run:
 ```
@@ -46,17 +31,39 @@ NOTE: this code assumes you are using a reference DEM (and other airborne lidar 
 
 ```
 -e user_dem      Path to user specifed DEM [one will be downloaded from py3dep if you don't supply one]
+
 -d debug         turns on debugging logging [Options: True or False]
+
 -a asp_dir       Directory with ASP binary files [Can be either ASP or ASP/bin directory]
+
 -s shp_fp        Shapefile to align with [road shapefile to use to tie reference DEM to your point cloud]
+
 -g geoid         Is the reference DEM CRS orthometric (geoid height)? Will be auto set to True if you don't supply a DEM [Default: False]
--r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output. 
+
+-r shp_fp_rfl    OPTIONAL: Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output. 
+
                  Additionally, if this  mode is selected, the supplied files must be .LAS with extra bytes included with "Intensity as Reflectance" returned by RIEGL.
--i imu_data      Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
-                 Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'].
--c cal_las       Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor. 
-                 To avoid confusion, please supply this file in a different directory from <in_dir>.
--k known_rfl     Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
+                 
+-i imu_data      OPTIONAL: Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time. Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'].
+
+-c cal_las       OPTIONAL: Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor. To avoid confusion, please supply this file in a different directory from <in_dir>.
+
+-k known_rfl     OPTIONAL: Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
+```
+
+
+#### OPTIONAL: If estimating grain size, install R and the following packages 
+
+```
+library(raster)
+library(lidR)
+library(rlas)
+library(dplyr)
+library(readr)
+library(terra)
+library(sf)
+library(data.table)
+
 ```
 
 

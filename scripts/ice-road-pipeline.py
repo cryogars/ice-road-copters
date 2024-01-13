@@ -27,24 +27,17 @@ from glob import glob
 from os.path import abspath, join, basename, isdir
 from laz_align import laz_align
 import rioxarray as rio
-import rasterio
 from rasterio.crs import CRS
-from osgeo import gdal
-import numpy as np
-import pandas as pd
 from datetime import datetime
 import logging
-import re
-import json
 import sys
-import subprocess
-from subprocess import Popen, PIPE
 import os
 
 # local imports
 from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
+from las2grain import ssa_pipeline
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -180,148 +173,14 @@ if __name__ == '__main__':
     canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()), other=0)
     canopyheight.rio.to_raster(canopy_fp)
 
-    # Command for testing...
-    # python ice-road-pipeline.py /Users/brent/Code/ice-road-copters/data/feb9/mcs/ -e /Users/brent/Code/LIDAR/data/QSI_snowfree.tif -a /Users/brent/Code/ice-road-copters/ASP/ -s /Users/brent/Code/ice-road-copters/transform_area/hwy_21/hwy21_utm_edit_v3.shp -r /Users/brent/Code/ice-road-copters/transform_area/Eagle/hill_rd_55_intersection.shp -i /Users/brent/Documents/MCS/LIDAR/IMU/20230209_MCS_precise_scanner_bw.txt -d True -c /Users/brent/Code/LIDAR/data/fl_230210_002840/20230209_extraBytes-230210_002840_Scanner_1.las -k 0.1956
+    # estimate ssa from reflectance using AART at 1064 nm.
     if shp_fp_rfl:
-
-        # Make sure R is installed
-        proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
-        exit_code = proc.wait()
-        if exit_code != 0:
-            raise Exception("Please install R on this system and packages: raster, lidR, rlas, dplyr, readr, terra,sf, data.table.")
-
-        # Check whether dem directory exists, if not, make one
-        ssa_dir = f'{results_dir}/ssa-calc'
-        if not os.path.exists(ssa_dir):
-            os.makedirs(ssa_dir)
-
-        # Displaying the parent directory of the script
-        scripts_dir = os.path.dirname(__file__)
-
-        # Load in the ASP translational-only matrix from pc-align tool
-        asp_matrix_fp = glob(f'{ice_dir}/results/pc-align-translation-only/temp-log*.txt')[0]
-        with open(asp_matrix_fp, 'r') as f:
-            lines = f.readlines()
-            for line in lines:
-                if "Translation vector (North-East-Down, meters): Vector3" in line: 
-                    n_e_d_shift = re.findall("[+-]?\d+\.\d+", line)
-                    n_e_d_shift = ','.join(n_e_d_shift)
-                    break
-
-        # get crs
-        ref_raster = rasterio.open(snow_tif)
-        crs = ref_raster.crs
-        pix_size, _ = ref_raster.res
-        crs = str(crs).split(":",1)[1]    
-        ras_meta = ref_raster.profile
-
-        # Compute slope and aspect from snow-on lidar
-        slope_fp = join(ice_dir, f'{basename(in_dir)}-snowon_slope.tif')
-        aspect_fp = join(ice_dir, f'{basename(in_dir)}-snowon_aspect.tif')
-        os.system(f'gdaldem slope -compute_edges {snow_tif} {slope_fp} -q')
-        os.system(f'gdaldem aspect -compute_edges -zero_for_flat {snow_tif} {aspect_fp} -q')
-        slope = rio.open_rasterio(slope_fp, masked=True)
-        aspect = rio.open_rasterio(aspect_fp, masked=True)
-
-        # Compute surface normal vector from snow-on lidar
-        ni_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_i.tif')
-        nj_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_j.tif')
-        nk_fp = join(ice_dir, f'{basename(in_dir)}-snowon_n_k.tif')
-        n_i = np.sin(np.radians(aspect)) * np.sin(np.radians(slope))
-        n_j = np.cos(np.radians(aspect)) * np.sin(np.radians(slope)) 
-        n_k = np.cos(np.radians(slope))
-        n_i.rio.to_raster(ni_fp)
-        n_j.rio.to_raster(nj_fp)
-        n_k.rio.to_raster(nk_fp)        
-        
-        # Calcs calibration stats from target
-        output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
-        subprocess.call(["Rscript", 
-                          f"{scripts_dir}/las_ssa_cal.r", 
-                          cal_las, crs, shp_fp_rfl, n_e_d_shift, 
-                          output_csv, imu_data, str(pix_size)])
-        
-        # Read in cal data and estimate factor
-        df = pd.read_csv(output_csv)
-        median_rfl = df['rfl'].median()
-        road_cal_factor = known_rfl / median_rfl
-        road_cal_factor = str(road_cal_factor) #convert to str for R
-
-        # For each file in <in-dir> 
-        for f in os.listdir(in_dir):
-             
-            # Set names
-            base_las = os.path.basename(f)
-            las_name = os.path.splitext(base_las)[0]
-
-            # R is making a .DS_Store in in_dir, and I can't figure out how or where...
-            # So this will be just a quick check to continue to next iter if encountered.
-            if las_name == ".DS_Store" or las_name == "ice-road":
-                continue 
-
-            rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
-
-            # Getting a translated "LAS" file
-            # "LAS" in quotations bc I am hiding the rfl here in "Z"
-            # with the intention to do fast IDW in the next step.
-            if os.path.exists(rfl_fp):
-                pass
-            else:
-                subprocess.call(["Rscript", 
-                                f"{scripts_dir}/las_ssa_prep.r", 
-                                f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                                n_e_d_shift,
-                                road_cal_factor,
-                                imu_data])
-
-        
-        rfl_fp = f'{ssa_dir}/rfl-merged.las'
-        rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
-
-        # Prep PDAL commands
-        #   ZACH: resolution is 1.0 in laz2dem.py??
-        json_path = join(json_dir, 'combine-rfl.json')
-        json_pipeline = {
-            "pipeline": [
-                rfl_fp,
-                {
-                    "type":"writers.gdal",
-                    "filename":rfl_fp_grid,
-                    "resolution":pix_size, 
-                    "output_type":"idw"
-                }
-            ]
-        }
-        with open(json_path,'w') as outfile:
-            json.dump(json_pipeline, outfile, indent = 2) 
-
-        # Run PDAL commands
-        inp_str = ' '.join(glob(join(ssa_dir, '*.las')))
-        if os.path.exists(rfl_fp_grid):
-            pass    
-        else:
-            cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
-            cl_call(f'pdal pipeline {json_path}', log)     
-
-        # Prepare inputs needed for SSA raster (vectorized operation)
-        # theta_grid = 180 (perfect backscatter relative to sensor)
-        ssa_fp = f'{ssa_dir}/ssa.tif'
-        rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-        rfl_grid = rfl_grid.rio.reproject_match(snowoff)
-        ssa_grid = rfl_grid.copy()
-        theta = 180 # based on data it is almost always 179-180
-        cosi=1 # because the reflectance is normalized by incidence angle in las_ssa_prep.R
-
-        # Apply ART - assuming all pixels are snow, directly solve SSA (pretty speedy)
-        k_ice = 1.8983928418833426e-06
-        wl = 1064*1e-9
-        d_ice = 917
-        g = 0.85
-        b = 1.6
-        ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
+        ssa_grid = ssa_pipeline(snow_tif, snowoff, cal_las, 
+                                shp_fp_rfl, imu_data, known_rfl, 
+                                json_dir, results_dir, ice_dir, in_dir)
+        ssa_fp = join(ice_dir, f'{basename(in_dir)}-ssa.tif')
 
         # Set threshold for snow depth and canopy height
-        # .. this is a little clunky but was having issues getting it mask both in one line..
         ssamask = canopyheight.rio.reproject_match(ssa_grid)
         snowdepth = snowdepth.rio.reproject_match(ssa_grid)
         ssamask = ssamask.where(ssamask <= 3, -100)

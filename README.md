@@ -23,7 +23,7 @@ $ conda activate iceroad
 #### Running the code
 from the ice-road-copters directory for example one can run:
 ```
-$ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to> -r <path-to-rfl-cal-target> -i <path-to-onboard-imu-csv> -c <path-cal-las-file> -k <known-rfl-float>
+$ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to>
 ```
 NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the WGS84 ellipsoid (EPSG:4326). If your reference DEM Coordinate Reference System (CRS) is orthometric (Geoid) you must set the `-g  True` flag. This prompts extraction of the CRS metadata and a subsequent coordinate transform. Users must supply a shape file clipped to the roadway through the domain. During co-registration, this code assumes  a buffer of 2.5 meters on either side of the centerline of the road (see buffer_meter variable in laz_align.py). TODO: turn this buffer_meter variable into a flag as well.
 

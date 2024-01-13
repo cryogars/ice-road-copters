@@ -8,7 +8,7 @@
 The ice-road-copter suite is designed to post-process point cloud data and enable differencing to resolve change in repeat collections. Our focus is snow depth maps. DEM differencing for snow depths requires detailed knowledge of Coordinate Reference Systems (CRS) for the reference product (snow-free) and other products (snow-on). Alignment issues often persist even when both products are tied to the same CRS, and this needs to be addressed with a co-registration process.  The software relies on the Point Data Abstraction Library (PDAL; www.pdal.io) for point cloud filtering and segmentation.  NASA's Ames Stereo Pipeline  (https://github.com/NeoGeographyToolkit/StereoPipeline) performs the co-registration component of the workflow.  The software is designed to use plowed roadways through the survey domain as co-registration objects, as the snow-covered domain often lacks stable features.   
 ###  Setting things up! :hammer:
 #### Downloading ASP precompiled binaries
-1. Download latest stable build (Linux or OSx (3.1.0)): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory. There are different builds for each OS, but you may have to dig a little to find the OSx build, it gets updated less.
+1. Download latest stable build (Linux or OSx): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory. There are different builds for each OS, but you may have to dig a little to find the OSx build, it gets updated less.
 2. Rename this folder as `ASP` and remove the zipped file
 
 
@@ -18,6 +18,7 @@ The ice-road-copter suite is designed to post-process point cloud data and enabl
 $ conda env create -f iceroad_env.yaml
 $ conda activate iceroad
 ```
+
 
 #### Running the code
 from the ice-road-copters directory for example one can run:
@@ -30,10 +31,32 @@ NOTE: this code assumes you are using a reference DEM (and other airborne lidar 
 
 ```
 -e user_dem      Path to user specifed DEM [one will be downloaded from py3dep if you don't supply one]
+
 -d debug         turns on debugging logging [Options: True or False]
+
 -a asp_dir       Directory with ASP binary files [Can be either ASP or ASP/bin directory]
+
 -s shp_fp        Shapefile to align with [road shapefile to use to tie reference DEM to your point cloud]
+
 -g geoid         Is the reference DEM CRS orthometric (geoid height)? Will be auto set to True if you don't supply a DEM [Default: False]
+
+```
+
+
+#### Optional: If estimating grain size, install R and the following packages 
+
+See `ice-road-pipeline.py` for the additional optional flags. This currently requires a target with a known reflectance in order to calibrate lidar reflectance. It assumes wavelength = 1064 nm.
+
+```
+library(raster)
+library(lidR)
+library(rlas)
+library(dplyr)
+library(readr)
+library(terra)
+library(sf)
+library(data.table)
+
 ```
 
 

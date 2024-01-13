@@ -96,11 +96,9 @@ def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
     
     # Calcs calibration stats from target
     output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
-    subprocess.call(["Rscript", f"{scripts_dir}/las_ssa_cal.r", 
-                     cal_las, crs, shp_fp_rfl, n_e_d_shift, 
-                     output_csv, imu_data, str(pix_size)], 
-                     stdout=log, stderr=log)
-    
+    cl_call(f'Rscript {scripts_dir}/las_ssa_cal.R {cal_las} {crs} {shp_fp_rfl} {n_e_d_shift} \
+            {output_csv} {imu_data} {str(pix_size)}', log)
+
     # Read in cal data and estimate factor
     df = pd.read_csv(output_csv)
     median_rfl = df['rfl'].median()
@@ -124,11 +122,8 @@ def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
         # Getting a translated "LAS" file
         # "LAS" in quotations bc I am hiding the rfl here in "Z"
         # with the intention to do fast IDW in the next step.
-        subprocess.call(["Rscript", 
-                         f"{scripts_dir}/las_ssa_prep.r", 
-                         f, crs, ni_fp, nj_fp, nk_fp, rfl_fp,
-                         n_e_d_shift,road_cal_factor,imu_data], 
-                         stdout=log, stderr=log)
+        cl_call(f'Rscript {scripts_dir}/las_ssa_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} \
+                {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data}', log)
 
     rfl_fp = f'{ssa_dir}/rfl-merged.las'
     rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'

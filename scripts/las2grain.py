@@ -175,7 +175,6 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
 
     theta = 180 # based on data it is almost always 179-180
 
-    # Apply AART - assuming all pixels are snow, directly solve SSA
     # This is the imaginary refractive index of ice for the wavelength at 1064 nm (fixed). 
     k_ice = 1.8983928418833426e-06
 
@@ -185,8 +184,7 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
     # This is the density of ice in kg/m3 (fixed).
     d_ice = 917
 
-    # These are grain shape coefficients that can be tuned based on the expected shape (tunable).
-    # g=0.85 and b=1.6 are from Libois et al. (2013), however, other shapes may be used to match conditions.
+    # Run AART - assuming all pixels are snow, directly solve SSA
     ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
 
     return ssa_grid

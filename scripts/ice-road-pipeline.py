@@ -9,7 +9,7 @@ Options:
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
     -s shp_fp        Shapefile to align with
-    -b buffer        Total width for the transform area
+    -b buffer_meters Total width for the transform area
     -g geoid         Is the reference DEM in geoid
     -r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with

@@ -38,7 +38,7 @@ NOTE: this code assumes you are using a reference DEM (and other airborne lidar 
 
 -s shp_fp        Shapefile to align with [road shapefile to use to tie reference DEM to your point cloud]
 
--b buffer        Total width for the transform area [Default: 3]
+-b buffer_meters Total width for the transform area [Default: 3]
 
 -g geoid         Is the reference DEM CRS orthometric (geoid height)? Will be auto set to True if you don't supply a DEM [Default: False]
 

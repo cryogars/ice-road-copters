@@ -1,12 +1,8 @@
 # Import libraries
-import os
-import re
-import sys
 from os.path import exists, join, basename, dirname, abspath, isdir
-import glob
 from unittest import result
 import geopandas as gpd
-from laz2dem import iceroad_logging, cl_call
+from laz2dem import cl_call
 import json
 import logging
 
@@ -119,7 +115,7 @@ def laz_align(in_dir,
             input_laz,
             canopy_laz,
             align_shp = 'transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
-            buffer_meters=2.5, 
+            buffer_meters=3.0, 
             dem_is_geoid=False, 
             asp_dir = None,
             las_extra_byte_format=False):
@@ -150,8 +146,10 @@ def laz_align(in_dir,
     log.info(f'Loading in shapefile {align_shp}')
     gdf = gpd.read_file(align_shp)
 
-    # Buffer geom based on user input
-    gdf['geometry'] = gdf.geometry.buffer(buffer_meters)
+    # Buffer geom based on user input. NOTE: we assume buffer_meters is the entire width. 
+    # So, must divide by 2 here to get the right distance from centerline.
+    log.info(f'Buffer width of {buffer_meters} m is used. This is {buffer_meters / 2} m from centerline.')
+    gdf['geometry'] = gdf.geometry.buffer(buffer_meters / 2)
 
     # Create a new attribute to be used for PDAL clip/overlay
     gdf['CLS'] = 42

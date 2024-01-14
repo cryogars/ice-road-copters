@@ -2,13 +2,14 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
 
 Options:
     -e user_dem      Path to user specifed DEM
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
     -s shp_fp        Shapefile to align with
+    -b buffer        Total width for the transform area
     -g geoid         Is the reference DEM in geoid
     -r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
@@ -67,6 +68,12 @@ if __name__ == '__main__':
     else:
         raise Exception("Provide filepath to .shp file for alignment with -s flag.")
     
+    buffer_meters = args.get('-b')
+    if buffer_meters:
+        known_rfl = float(buffer_meters)
+    else:
+        buffer_meters = 3.0
+
     shp_fp_rfl = args.get('-r')
     if shp_fp_rfl:
         shp_fp_rfl = abspath(shp_fp_rfl)
@@ -138,8 +145,11 @@ if __name__ == '__main__':
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 
-    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, asp_dir = asp_dir,\
-         log = log, input_laz = outlas, canopy_laz = canopy_laz, dem_is_geoid= geoid, las_extra_byte_format=las_extra_byte_format)
+    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, 
+                                     asp_dir = asp_dir,log = log, input_laz = outlas, 
+                                     canopy_laz = canopy_laz, dem_is_geoid= geoid, 
+                                     buffer_meters=buffer_meters,
+                                     las_extra_byte_format=las_extra_byte_format)
     
     # clean up after ASP a bit
     for fp in os.listdir(ice_dir):

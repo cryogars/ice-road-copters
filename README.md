@@ -71,6 +71,6 @@ For example, we used prior knowledge that HWY-21 running through our study site 
 
 ![roads](./docs/roads.png)
 
-After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps with road differences less than 2 cm.
+After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps with road differences on the cm scale.
 
 ![snow](./docs/snow.jpeg)

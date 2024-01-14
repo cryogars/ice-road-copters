@@ -2,7 +2,7 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
 
 Options:
     -e user_dem      Path to user specifed DEM

@@ -88,7 +88,7 @@ df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
 df <- df %>%
     mutate( 
       range = sqrt((X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2),
-      trans = exp(alpha * range),
+      trans = exp(alpha * (range/1000)),
       cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (range * sqrt(n_i^2 + n_j^2 +n_k^2)),
       rfl = (10^(Reflectance/10) / cosi) * (road_cal_factor  / trans**2)
 )

@@ -8,40 +8,44 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, las_extra_byte_format=False):
-        # Clip clean_PC to the transform_area using PDAL
-        # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
-        clipped_pc = join(result_dir, 'clipped_PC.laz')
-        json_path = join(json_dir, 'clip_to_shp.json')
+def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, is_canopy=False, las_extra_byte_format=False):
+        
 
-        # Create .json file for PDAL clip
-        json_pipeline = {
-            "pipeline": [
-                input_laz,
-                {
-                    "type":"filters.overlay",
-                    "dimension":"Classification",
-                    "datasource":buff_shp,
-                    "layer":"buffered_area",
-                    "column":"CLS"
-                },
-                {
-                    "type":"filters.range",
-                    "limits":"Classification[42:42]"
-                },
-                clipped_pc
-            ]
-        }
-        with open(json_path,'w') as outfile:
-            json.dump(json_pipeline, outfile, indent = 2)
+        # Have is_canopy flag to avoid running twice...
+        if is_canopy is False:     
+            # Clip clean_PC to the transform_area using PDAL
+            # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
+            clipped_pc = join(result_dir, 'clipped_PC.laz')
+            json_path = join(json_dir, 'clip_to_shp.json')
 
-        cl_call(f'pdal pipeline {json_path}', log)               
+            # Create .json file for PDAL clip
+            json_pipeline = {
+                "pipeline": [
+                    input_laz,
+                    {
+                        "type":"filters.overlay",
+                        "dimension":"Classification",
+                        "datasource":buff_shp,
+                        "layer":"buffered_area",
+                        "column":"CLS"
+                    },
+                    {
+                        "type":"filters.range",
+                        "limits":"Classification[42:42]"
+                    },
+                    clipped_pc
+                ]
+            }
+            with open(json_path,'w') as outfile:
+                json.dump(json_pipeline, outfile, indent = 2)
 
-        # Check to see if output clipped point cloud was created
-        if not exists(clipped_pc):
-            raise Exception('Output point cloud not created')
+            #cl_call(f'pdal pipeline {json_path}', log)               
 
-        log.info('Point cloud clipped to area')
+            # Check to see if output clipped point cloud was created
+            if not exists(clipped_pc):
+                raise Exception('Output point cloud not created')
+
+            log.info('Point cloud clipped to area')
 
         # Define paths for next if statement
         in_dem = join(result_dir, 'dem.tif')
@@ -72,12 +76,30 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
             log.info('Merged DEM was kept in original ellipsoid form...')
 
         # Call ASP pc_align function on road and DEM and output translation/rotation matrix
-        pc_align_func = join(asp_dir, 'pc_align')
         align_pc = join(result_dir,'pc-align',basename(final_tif))
-        log.info('Beginning pc_align function...')
-        cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                    {ref_dem} {clipped_pc} -o {align_pc}', log) # change run to something better
+        pc_align_func = join(asp_dir, 'pc_align')
+
+        # Have is_canopy flag to avoid running twice...
+        if is_canopy is False:     
+            log.info('Beginning pc_align function...')
+            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                        {ref_dem} {clipped_pc} -o {align_pc}', log)
         
+        # Since there are issues in transforming the point cloud and retaining reflectance,
+        # the best I can do is translation only and no rotation..
+        # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
+        # will be called in order to save the X,Y,Z translation only. This will not be applied
+        # to the snow depth products, so there may be some subtle differences when comparing between the two. 
+        # However, this is in hopes to retain the higher information where we can..
+        # --compute-translation-only
+        if las_extra_byte_format is True and is_canopy is False:
+            transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
+            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                    --compute-translation-only   \
+                        {ref_dem} {clipped_pc}   \
+                        -o {transform_pc_temp}', log)     
+            
+
         # Apply transformation matrix to the entire laz and output points
         # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
         transform_pc = join(result_dir,'pc-transform',basename(final_tif))
@@ -87,20 +109,6 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                     {ref_dem} {input_laz}   \
                     -o {transform_pc}', log)
 
-        # Since there are issues in transforming the point cloud and retaining reflectance,
-        # the best I can do is translation only and no rotation..
-        # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
-        # will be called in order to save the X,Y,Z translation only. This will not be applied
-        # to the snow depth products, so there may be some subtle differences when comparing between the two. 
-        # However, this is in hopes to retain the higher information where we can..
-        # --compute-translation-only
-        if las_extra_byte_format is True:
-            transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
-            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                     --compute-translation-only   \
-                        {ref_dem} {clipped_pc}   \
-                        -o {transform_pc_temp}', log)     
-
         # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
         point2dem_func = join(asp_dir, 'point2dem')
         # final_tif = join(ice_dir, 'pc-grid', 'run')
@@ -108,6 +116,9 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                     --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
     
         return final_tif + '-DEM.tif'
+
+
+
 
 # Find transformations/rotations via iceyroads and apply to whole point cloud
 def laz_align(in_dir, 
@@ -173,11 +184,11 @@ def laz_align(in_dir,
         
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = snow_final_tif, las_extra_byte_format=las_extra_byte_format)
+        final_tif = snow_final_tif, is_canopy=False, las_extra_byte_format=las_extra_byte_format)
 
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = canopy_final_tif)
+        final_tif = canopy_final_tif, is_canopy=True, las_extra_byte_format=las_extra_byte_format)
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif):

@@ -185,7 +185,7 @@ if __name__ == '__main__':
 
     # estimate ssa from reflectance using AART at 1064 nm.
     if shp_fp_rfl:
-        ssa_grid = ssa_pipeline(snow_tif, snowoff, cal_las, 
+        ssa_grid = ssa_pipeline(snow_tif, cal_las, 
                                 shp_fp_rfl, imu_data, known_rfl, 
                                 json_dir, results_dir, ice_dir, in_dir)
         ssa_fp = join(ice_dir, f'{basename(in_dir)}-ssa.tif')

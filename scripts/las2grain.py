@@ -257,6 +257,13 @@ def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
     cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
     cl_call(f'pdal pipeline {json_path}', log)  
 
+    ref_raster = rasterio.open(snow_tif)
+    crs = ref_raster.crs
+
+    rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
+    rfl_grid = rfl_grid.rio.set_crs(crs, inplace=True)
+    rfl_grid.rio.to_raster(rfl_fp_grid)
+
     return rfl_fp_grid
 
 
@@ -296,7 +303,7 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
 
 
 
-def ssa_pipeline(snow_tif, snowoff, cal_las, shp_fp_rfl,
+def ssa_pipeline(snow_tif, cal_las, shp_fp_rfl,
                  imu_data, known_rfl, json_dir,
                  results_dir, ice_dir, in_dir):
     '''
@@ -321,8 +328,10 @@ def ssa_pipeline(snow_tif, snowoff, cal_las, shp_fp_rfl,
     
     # Prepare inputs needed for SSA raster (vectorized operation)
     # theta_grid = 180 (perfect backscatter relative to sensor)
+    ref_raster = rio.open_rasterio(snow_tif, masked=True) 
+
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    rfl_grid = rfl_grid.rio.reproject_match(snowoff)
+    rfl_grid = rfl_grid.rio.reproject_match(ref_raster)
     ssa_grid = rfl_grid.copy()
 
     # Call AART

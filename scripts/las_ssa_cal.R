@@ -17,10 +17,13 @@ n_e_d_shift <- args[4]
 output_csv <- args[5]
 imu_data <- args[6]
 pix_size <- args[7]
+alpha <- args[8]
 
 # LOAD CAL LAS
 crs <- as.numeric(crs)
 pix_size <- as.numeric(pix_size)
+alpha <- as.numeric(alpha)
+
 las <- readLAS(cal_las)
 st_crs(las) <- crs
 
@@ -90,8 +93,10 @@ df$Z_h <- df$Z - d_shift
 # COMPUTE RFL (NORMALIZED BY INC ANGLE)
 df <- df %>%
     mutate( 
-      cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)),
-      rfl = 10^(Reflectance/10) / cosi
+      range = sqrt((X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2),
+      trans = exp(alpha * range),
+      cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (range * sqrt(n_i^2 + n_j^2 +n_k^2)),
+      rfl = (10^(Reflectance/10) / cosi) * (1 / trans**2)
 )
 
 # WRITE CSV

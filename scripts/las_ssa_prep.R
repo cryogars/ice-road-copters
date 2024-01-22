@@ -19,10 +19,13 @@ rfl_fp <- args[6]
 n_e_d_shift <- args[7]
 road_cal_factor <- args[8]
 imu_data <- args[9]
+alpha <- args[10]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
 road_cal_factor <- as.numeric(road_cal_factor)
+alpha <- as.numeric(alpha)
+
 las <- readLAS(f)
 st_crs(las) <- crs
 
@@ -81,12 +84,14 @@ df$X_h <- df$X_h + e_shift # ASP shift applied here (E)
 df$Y_h <- df$Y_h + n_shift # ASP shift applied here (N)
 df$Z_h <- df$Z_h - d_shift # ASP shift applied here (D)
 
-# COMPUTE RFL
+# COMPUTE RFL (NORMALIZED BY INC ANGLE)
 df <- df %>%
-    mutate(
-      cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (sqrt( (X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2) * sqrt(n_i^2 + n_j^2 +n_k^2)),
-      rfl = (10^(Reflectance/10) * road_cal_factor) / cosi
-        )
+    mutate( 
+      range = sqrt((X_h-X)^2 + (Y_h-Y)^2 + (Z_h-Z)^2),
+      trans = exp(alpha * range),
+      cosi = ((X_h-X)*n_i + (Y_h-Y)*n_j + (Z_h-Z)*n_k) / (range * sqrt(n_i^2 + n_j^2 +n_k^2)),
+      rfl = (10^(Reflectance/10) / cosi) * (road_cal_factor  / trans**2)
+)
 
 # REMOVE COSI < 0.50 (EMPIRICAL/SENS)
 df <- filter(df, cosi>=0.50)

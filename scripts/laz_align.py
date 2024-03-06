@@ -11,41 +11,39 @@ log = logging.getLogger(__name__)
 def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, is_canopy=False, las_extra_byte_format=False):
         
 
-        # Have is_canopy flag to avoid running twice...
-        if is_canopy is False:     
-            # Clip clean_PC to the transform_area using PDAL
-            # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
-            clipped_pc = join(result_dir, 'clipped_PC.laz')
-            json_path = join(json_dir, 'clip_to_shp.json')
+        # Clip clean_PC to the transform_area using PDAL
+        # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
+        clipped_pc = join(result_dir, 'clipped_PC.laz')
+        json_path = join(json_dir, 'clip_to_shp.json')
 
-            # Create .json file for PDAL clip
-            json_pipeline = {
-                "pipeline": [
-                    input_laz,
-                    {
-                        "type":"filters.overlay",
-                        "dimension":"Classification",
-                        "datasource":buff_shp,
-                        "layer":"buffered_area",
-                        "column":"CLS"
-                    },
-                    {
-                        "type":"filters.range",
-                        "limits":"Classification[42:42]"
-                    },
-                    clipped_pc
-                ]
-            }
-            with open(json_path,'w') as outfile:
-                json.dump(json_pipeline, outfile, indent = 2)
+        # Create .json file for PDAL clip
+        json_pipeline = {
+            "pipeline": [
+                input_laz,
+                {
+                    "type":"filters.overlay",
+                    "dimension":"Classification",
+                    "datasource":buff_shp,
+                    "layer":"buffered_area",
+                    "column":"CLS"
+                },
+                {
+                    "type":"filters.range",
+                    "limits":"Classification[42:42]"
+                },
+                clipped_pc
+            ]
+        }
+        with open(json_path,'w') as outfile:
+            json.dump(json_pipeline, outfile, indent = 2)
 
-            #cl_call(f'pdal pipeline {json_path}', log)               
+        cl_call(f'pdal pipeline {json_path}', log)               
 
-            # Check to see if output clipped point cloud was created
-            if not exists(clipped_pc):
-                raise Exception('Output point cloud not created')
+        # Check to see if output clipped point cloud was created
+        if not exists(clipped_pc):
+            raise Exception('Output point cloud not created')
 
-            log.info('Point cloud clipped to area')
+        log.info('Point cloud clipped to area')
 
         # Define paths for next if statement
         in_dem = join(result_dir, 'dem.tif')

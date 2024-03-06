@@ -74,13 +74,10 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
     align_pc = join(result_dir,'pc-align',basename(final_tif))
-    pc_align_func = join(asp_dir, 'pc_align')
-
-    # Have is_canopy flag to avoid running twice...
-    if is_canopy is False:     
-        log.info('Beginning pc_align function...')
-        cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                    {ref_dem} {clipped_pc} -o {align_pc}', log)
+    pc_align_func = join(asp_dir, 'pc_align') 
+    log.info('Beginning pc_align function...')
+    cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                {ref_dem} {clipped_pc} -o {align_pc}', log)
     
     # Since there are issues in transforming the point cloud and retaining reflectance,
     # the best I can do is translation only and no rotation..

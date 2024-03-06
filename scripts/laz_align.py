@@ -9,111 +9,110 @@ import logging
 log = logging.getLogger(__name__)
 
 def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, is_canopy=False, las_extra_byte_format=False):
-        
-
-        # Clip clean_PC to the transform_area using PDAL
-        # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
-        clipped_pc = join(result_dir, 'clipped_PC.laz')
-        json_path = join(json_dir, 'clip_to_shp.json')
-
-        # Create .json file for PDAL clip
-        json_pipeline = {
-            "pipeline": [
-                input_laz,
-                {
-                    "type":"filters.overlay",
-                    "dimension":"Classification",
-                    "datasource":buff_shp,
-                    "layer":"buffered_area",
-                    "column":"CLS"
-                },
-                {
-                    "type":"filters.range",
-                    "limits":"Classification[42:42]"
-                },
-                clipped_pc
-            ]
-        }
-        with open(json_path,'w') as outfile:
-            json.dump(json_pipeline, outfile, indent = 2)
-
-        cl_call(f'pdal pipeline {json_path}', log)               
-
-        # Check to see if output clipped point cloud was created
-        if not exists(clipped_pc):
-            raise Exception('Output point cloud not created')
-
-        log.info('Point cloud clipped to area')
-
-        # Define paths for next if statement
-        in_dem = join(result_dir, 'dem.tif')
-        
-        if dem_is_geoid is True:
-            # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-            nad83_dem = join(result_dir, 'demNAD_tmp.tif')
-            gdal_func = join(asp_dir, 'gdalwarp')
-            cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
-            # Use ASP to convert from geoid to ellipsoid
-            ellisoid_dem = join(result_dir, 'dem_wgs')
-            geoid_func = join(asp_dir, 'dem_geoid')
-            cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
-                    --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
-            # Set it back to WGS84
-            ref_dem = join(result_dir, 'ellipsoid_DEM.tif')
-            cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
-
-            # check for success
-            if not exists(ref_dem):
-                raise Exception('Conversion to ellipsoid failed')
-
-            log.info('Merged DEM converted to ellipsoid per user input')
-
-        else:
-            # cl_call('cp '+ in_dem +' '+ ref_dem, log)
-            ref_dem = in_dem
-            log.info('Merged DEM was kept in original ellipsoid form...')
-
-        # Call ASP pc_align function on road and DEM and output translation/rotation matrix
-        align_pc = join(result_dir,'pc-align',basename(final_tif))
-        pc_align_func = join(asp_dir, 'pc_align')
-
-        # Have is_canopy flag to avoid running twice...
-        if is_canopy is False:     
-            log.info('Beginning pc_align function...')
-            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                        {ref_dem} {clipped_pc} -o {align_pc}', log)
-        
-        # Since there are issues in transforming the point cloud and retaining reflectance,
-        # the best I can do is translation only and no rotation..
-        # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
-        # will be called in order to save the X,Y,Z translation only. This will not be applied
-        # to the snow depth products, so there may be some subtle differences when comparing between the two. 
-        # However, this is in hopes to retain the higher information where we can..
-        # --compute-translation-only
-        if las_extra_byte_format is True and is_canopy is False:
-            transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
-            cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
-                    --compute-translation-only   \
-                        {ref_dem} {clipped_pc}   \
-                        -o {transform_pc_temp}', log)     
-            
-
-        # Apply transformation matrix to the entire laz and output points
-        # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
-        transform_pc = join(result_dir,'pc-transform',basename(final_tif))
-        cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
-                    --initial-transform {align_pc}-transform.txt \
-                    --save-transformed-source-points                            \
-                    {ref_dem} {input_laz}   \
-                    -o {transform_pc}', log)
-
-        # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
-        point2dem_func = join(asp_dir, 'point2dem')
-        # final_tif = join(ice_dir, 'pc-grid', 'run')
-        cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
-                    --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
     
-        return final_tif + '-DEM.tif'
+    # Clip clean_PC to the transform_area using PDAL
+    # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
+    clipped_pc = join(result_dir, 'clipped_PC.laz')
+    json_path = join(json_dir, 'clip_to_shp.json')
+
+    # Create .json file for PDAL clip
+    json_pipeline = {
+        "pipeline": [
+            input_laz,
+            {
+                "type":"filters.overlay",
+                "dimension":"Classification",
+                "datasource":buff_shp,
+                "layer":"buffered_area",
+                "column":"CLS"
+            },
+            {
+                "type":"filters.range",
+                "limits":"Classification[42:42]"
+            },
+            clipped_pc
+        ]
+    }
+    with open(json_path,'w') as outfile:
+        json.dump(json_pipeline, outfile, indent = 2)
+
+    cl_call(f'pdal pipeline {json_path}', log)               
+
+    # Check to see if output clipped point cloud was created
+    if not exists(clipped_pc):
+        raise Exception('Output point cloud not created')
+
+    log.info('Point cloud clipped to area')
+
+    # Define paths for next if statement
+    in_dem = join(result_dir, 'dem.tif')
+    
+    if dem_is_geoid is True:
+        # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
+        nad83_dem = join(result_dir, 'demNAD_tmp.tif')
+        gdal_func = join(asp_dir, 'gdalwarp')
+        cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
+        # Use ASP to convert from geoid to ellipsoid
+        ellisoid_dem = join(result_dir, 'dem_wgs')
+        geoid_func = join(asp_dir, 'dem_geoid')
+        cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
+                --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
+        # Set it back to WGS84
+        ref_dem = join(result_dir, 'ellipsoid_DEM.tif')
+        cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
+
+        # check for success
+        if not exists(ref_dem):
+            raise Exception('Conversion to ellipsoid failed')
+
+        log.info('Merged DEM converted to ellipsoid per user input')
+
+    else:
+        # cl_call('cp '+ in_dem +' '+ ref_dem, log)
+        ref_dem = in_dem
+        log.info('Merged DEM was kept in original ellipsoid form...')
+
+    # Call ASP pc_align function on road and DEM and output translation/rotation matrix
+    align_pc = join(result_dir,'pc-align',basename(final_tif))
+    pc_align_func = join(asp_dir, 'pc_align')
+
+    # Have is_canopy flag to avoid running twice...
+    if is_canopy is False:     
+        log.info('Beginning pc_align function...')
+        cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                    {ref_dem} {clipped_pc} -o {align_pc}', log)
+    
+    # Since there are issues in transforming the point cloud and retaining reflectance,
+    # the best I can do is translation only and no rotation..
+    # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
+    # will be called in order to save the X,Y,Z translation only. This will not be applied
+    # to the snow depth products, so there may be some subtle differences when comparing between the two. 
+    # However, this is in hopes to retain the higher information where we can..
+    # --compute-translation-only
+    if las_extra_byte_format is True and is_canopy is False:
+        transform_pc_temp = join(result_dir,'pc-align-translation-only','temp')
+        cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
+                --compute-translation-only   \
+                    {ref_dem} {clipped_pc}   \
+                    -o {transform_pc_temp}', log)     
+        
+
+    # Apply transformation matrix to the entire laz and output points
+    # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
+    transform_pc = join(result_dir,'pc-transform',basename(final_tif))
+    cl_call(f'{pc_align_func} --max-displacement -1 --num-iterations 0 \
+                --initial-transform {align_pc}-transform.txt \
+                --save-transformed-source-points                            \
+                {ref_dem} {input_laz}   \
+                -o {transform_pc}', log)
+
+    # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
+    point2dem_func = join(asp_dir, 'point2dem')
+    # final_tif = join(ice_dir, 'pc-grid', 'run')
+    cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
+                --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
+
+    return final_tif + '-DEM.tif'
 
 
 

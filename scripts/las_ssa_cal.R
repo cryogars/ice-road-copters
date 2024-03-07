@@ -86,9 +86,9 @@ setkey(imu,gpstime)
 df <- imu[df,roll = "nearest"]
 
 # APPLY ASP PC-ALIGN TRANSLATION
-df$X_h <- df$X + e_shift 
-df$Y_h <- df$Y + n_shift 
-df$Z_h <- df$Z - d_shift 
+df$X_h <- df$X_h + e_shift 
+df$Y_h <- df$Y_h + n_shift 
+df$Z_h <- df$Z_h - d_shift 
 
 # COMPUTE RFL (NORMALIZED BY INC ANGLE)
 df <- df %>%

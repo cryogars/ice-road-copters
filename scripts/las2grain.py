@@ -122,9 +122,9 @@ def estimate_attenuation(lrt_dir='/Users/brent/Code/ice-road-copters/test'):
     return alpha
 
 
-def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
+def normalized_reflectance(snowon_matched, cal_las, shp_fp_rfl,
                            imu_data, known_rfl, json_dir,
-                           results_dir, ice_dir, in_dir):
+                           results_dir, ice_dir, in_dir, snow_tif):
     '''
     This function utilizes lidR package to leverage the use of key features such as translation,
     sample grid data, and apply math operations. With this being an R package, this function requires
@@ -172,9 +172,8 @@ def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
         raise Exception('There was an issue finding translation vector in the text file. ASP pc-align tool may have changed their output if this is the case.')
     
     # get crs
-    ref_raster = rasterio.open(snow_tif)
-    crs = ref_raster.crs
-    pix_size, _ = ref_raster.res
+    crs = snowon_matched.crs
+    pix_size, _ = snowon_matched.res
     crs = str(crs).split(":",1)[1]
     log.info(f'Using pixel size: {pix_size} m and using CRS: {crs}.') 
 
@@ -257,8 +256,7 @@ def normalized_reflectance(snow_tif, cal_las, shp_fp_rfl,
     cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
     cl_call(f'pdal pipeline {json_path}', log)  
 
-    ref_raster = rasterio.open(snow_tif)
-    crs = ref_raster.crs
+    crs = snowon_matched.crs
 
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
     rfl_grid = rfl_grid.rio.set_crs(crs, inplace=True)
@@ -303,9 +301,9 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
 
 
 
-def ssa_pipeline(snow_tif, cal_las, shp_fp_rfl,
+def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
                  imu_data, known_rfl, json_dir,
-                 results_dir, ice_dir, in_dir):
+                 results_dir, ice_dir, in_dir, snow_tif):
     '''
     
     Runs normalized_reflectance for each of the flight lines and merges into one raster.
@@ -318,20 +316,17 @@ def ssa_pipeline(snow_tif, cal_las, shp_fp_rfl,
     '''
 
     # Run through each flightline and mosaic reflectance
-    rfl_fp_grid = normalized_reflectance(snow_tif, cal_las, 
+    rfl_fp_grid = normalized_reflectance(snowon_matched, cal_las, 
                                          shp_fp_rfl,
                                          imu_data, 
                                          known_rfl, 
                                          json_dir,
                                          results_dir, 
-                                         ice_dir, in_dir)
+                                         ice_dir, in_dir,
+                                         snow_tif)
     
-    # Prepare inputs needed for SSA raster (vectorized operation)
-    # theta_grid = 180 (perfect backscatter relative to sensor)
-    ref_raster = rio.open_rasterio(snow_tif, masked=True) 
-
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    rfl_grid = rfl_grid.rio.reproject_match(ref_raster)
+    rfl_grid = rfl_grid.rio.reproject_match(snowon_matched)
     ssa_grid = rfl_grid.copy()
 
     # Call AART

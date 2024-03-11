@@ -22,11 +22,11 @@ log = logging.getLogger(__name__)
 def calc_transmittance(altitude_km,
                        file_name,
                        path_to_libradtran_bin='/Users/brent/Documents/Albedo/libRadtran-2.0.4/bin', 
-                       lrt_dir='/Users/brent/Code/ice-road-copters/test', 
+                       lrt_dir='/Users/brent/Code/ice-road-copters/test/test_dec', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=5.93 ,
-                       aod=0.095):
+                       h=4.79 ,
+                       aod=0.073):
     
     '''
 
@@ -122,7 +122,7 @@ def estimate_attenuation(lrt_dir='/Users/brent/Code/ice-road-copters/test'):
     return alpha
 
 
-def normalized_reflectance(snowon_matched, cal_las, shp_fp_rfl,
+def normalized_reflectance(cal_las, shp_fp_rfl,
                            imu_data, known_rfl, json_dir,
                            results_dir, ice_dir, in_dir, snow_tif):
     '''
@@ -172,8 +172,9 @@ def normalized_reflectance(snowon_matched, cal_las, shp_fp_rfl,
         raise Exception('There was an issue finding translation vector in the text file. ASP pc-align tool may have changed their output if this is the case.')
     
     # get crs
-    crs = snowon_matched.crs
-    pix_size, _ = snowon_matched.res
+    ref_raster = rasterio.open(snow_tif)
+    crs = ref_raster.crs
+    pix_size, _ = ref_raster.res
     crs = str(crs).split(":",1)[1]
     log.info(f'Using pixel size: {pix_size} m and using CRS: {crs}.') 
 
@@ -256,8 +257,11 @@ def normalized_reflectance(snowon_matched, cal_las, shp_fp_rfl,
     cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
     cl_call(f'pdal pipeline {json_path}', log)  
 
-    crs = snowon_matched.crs
+    # get CRS
+    ref_raster = rasterio.open(snow_tif)
+    crs = ref_raster.crs
 
+    # Match to snow-on raster
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
     rfl_grid = rfl_grid.rio.set_crs(crs, inplace=True)
     rfl_grid.rio.to_raster(rfl_fp_grid)
@@ -316,7 +320,7 @@ def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
     '''
 
     # Run through each flightline and mosaic reflectance
-    rfl_fp_grid = normalized_reflectance(snowon_matched, cal_las, 
+    rfl_fp_grid = normalized_reflectance(cal_las, 
                                          shp_fp_rfl,
                                          imu_data, 
                                          known_rfl, 
@@ -325,6 +329,7 @@ def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
                                          ice_dir, in_dir,
                                          snow_tif)
     
+    # Match to snow-on raster
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
     rfl_grid = rfl_grid.rio.reproject_match(snowon_matched)
     ssa_grid = rfl_grid.copy()

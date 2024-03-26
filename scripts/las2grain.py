@@ -25,8 +25,8 @@ def calc_transmittance(altitude_km,
                        lrt_dir='/Users/brent/Code/ice-road-copters/test/test_dec', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=4.79 ,
-                       aod=0.073):
+                       h=6.27 ,
+                       aod=0.052):
     
     '''
 
@@ -37,8 +37,8 @@ def calc_transmittance(altitude_km,
 
           https://aeronet.gsfc.nasa.gov/
 
-    Both are from the Meridian_DEQ site for Feb 9,2023. These values can be changes as needed.
-    For now they are hard coded here in the function.
+    Both are from the Meridian_DEQ site. For now I have been updating h and aod variables for each date.
+    
 
     On the physics, the attenuation is relatively small using our methodology, and only really shows a small 1% 
     change when the range (or beam distance) varies largely from the calibration range at Eagle.

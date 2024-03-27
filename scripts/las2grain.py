@@ -25,8 +25,8 @@ def calc_transmittance(altitude_km,
                        lrt_dir='/Users/brent/Code/ice-road-copters/test', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=4.79 ,
-                       aod=0.073):
+                       h=6.27 ,
+                       aod=0.052):
     
     '''
 

@@ -22,11 +22,11 @@ log = logging.getLogger(__name__)
 def calc_transmittance(altitude_km,
                        file_name,
                        path_to_libradtran_bin='/Users/brent/Documents/Albedo/libRadtran-2.0.4/bin', 
-                       lrt_dir='/Users/brent/Code/ice-road-copters/test/test_dec', 
+                       lrt_dir='/Users/brent/Code/ice-road-copters/test', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=6.27 ,
-                       aod=0.052):
+                       h=4.79 ,
+                       aod=0.073):
     
     '''
 

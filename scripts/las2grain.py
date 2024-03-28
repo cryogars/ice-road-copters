@@ -141,16 +141,25 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
 
     '''
 
+    # Check whether ssa directory exists, if not, make one
+    ssa_dir = f'{results_dir}/ssa-calc'
+    if not os.path.exists(ssa_dir):
+        os.makedirs(ssa_dir)
+
+    rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
+    if os.path.exists(rfl_fp_grid):
+        while True:
+            ans = input("SSA tif already exists. Enter y to overwrite and n to use existing:")
+            if ans.lower() == 'n':
+                return rfl_fp_grid
+            elif ans.lower() == 'y':
+                break
+
     # Make sure R is installed
     proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
     exit_code = proc.wait()
     if exit_code != 0:
         raise Exception("Please install R on this system and packages: raster, lidR, rlas, dplyr, readr, terra,sf, data.table.")
-
-    # Check whether dem directory exists, if not, make one
-    ssa_dir = f'{results_dir}/ssa-calc'
-    if not os.path.exists(ssa_dir):
-        os.makedirs(ssa_dir)
 
     # Displaying the parent directory of the script
     scripts_dir = os.path.dirname(__file__)
@@ -234,7 +243,6 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
                 {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data} {str(alpha)}', log)
 
     rfl_fp = f'{ssa_dir}/rfl-merged.las'
-    rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
 
     # Prep PDAL commands
     json_path = join(json_dir, 'combine-rfl.json')
@@ -332,8 +340,14 @@ def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
     # Match to snow-on raster
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
     ssa_grid = rfl_grid.copy()
+    ssa_grid = ssa_grid.rio.reproject_match(rfl_grid)
+
+    # get CRS
+    ref_raster = rasterio.open(snow_tif)
+    crs = ref_raster.crs
 
     # Call AART
     ssa_grid = aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6)
+    ssa_grid = ssa_grid.rio.set_crs(crs, inplace=True)
 
     return ssa_grid

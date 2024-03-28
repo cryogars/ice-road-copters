@@ -230,7 +230,7 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
         # Getting a translated "LAS" file
         # "LAS" in quotations bc I am hiding the rfl here in "Z"
         # with the intention to do fast IDW in the next step.
-        cl_call(f'Rscript {scripts_dir}/las_ssa_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} \
+        cl_call(f'Rscript {scripts_dir}/las_ssa_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} {snow_tif} \
                 {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data} {str(alpha)}', log)
 
     rfl_fp = f'{ssa_dir}/rfl-merged.las'
@@ -328,13 +328,9 @@ def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
                                          results_dir, 
                                          ice_dir, in_dir,
                                          snow_tif)
-    
+ 
     # Match to snow-on raster
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    ref_raster = rasterio.open(snow_tif)
-    crs = ref_raster.crs
-    snowon_matched = snowon_matched.rio.write_crs(crs, inplace=True)
-    rfl_grid = rfl_grid.rio.reproject_match(snowon_matched)
     ssa_grid = rfl_grid.copy()
 
     # Call AART

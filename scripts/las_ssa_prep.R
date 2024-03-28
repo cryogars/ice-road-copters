@@ -15,11 +15,12 @@ crs <- args[2]
 ni_fp <- args[3]
 nj_fp <- args[4]
 nk_fp <- args[5]
-rfl_fp <- args[6]
-n_e_d_shift <- args[7]
-road_cal_factor <- args[8]
-imu_data <- args[9]
-alpha <- args[10]
+elev_fp <- args[6]
+rfl_fp <- args[7]
+n_e_d_shift <- args[8]
+road_cal_factor <- args[9]
+imu_data <- args[10]
+alpha <- args[11]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
@@ -44,15 +45,22 @@ las@data$Z <- las@data$Z - d_shift # ASP shift applied here (D)
 x <- raster(ni_fp)
 y <- raster(nj_fp)
 z <- raster(nk_fp)
+elev <- raster(elev_fp)
 las <- merge_spatial(las, x, attribute = "n_i")
 las <- merge_spatial(las, y, attribute = "n_j")
 las <- merge_spatial(las, z, attribute = "n_k")
+las <- merge_spatial(las, elev, attribute = "elev")
 
 # CONVERT TO DF. FILTER OUT NA AND SELECT ONLY FIRST RETURNS.
 df <- payload(las)
-df<- filter(df, NumberOfReturns == 1)
-df<- filter(df, ReturnNumber == 1)
-df<- filter(df, n_i != "NA")
+df <- filter(df, NumberOfReturns == 1)
+df <- filter(df, ReturnNumber == 1)
+df <- filter(df, n_i != "NA")
+df <- filter(df, abs(Z-elev) < 50) # REMOVE NOISE ABOVE TREES
+# NOTE: I really only had trouble with noise on the Dec 8, 2022 flight. There seemed to be 
+# some sort of signal detected along the path of the helicopter right below it..
+# this noise looked worse for the Eagle boresight cal flights. I did not see this kind
+# of noise on the other flights i worked on.
 
 # HELI IMU DATA
 imu <- read_csv(imu_data,show_col_types = FALSE)

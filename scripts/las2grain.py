@@ -339,15 +339,13 @@ def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
  
     # Match to snow-on raster
     rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    ssa_grid = rfl_grid.copy()
-    ssa_grid = ssa_grid.rio.reproject_match(rfl_grid)
-
-    # get CRS
     ref_raster = rasterio.open(snow_tif)
     crs = ref_raster.crs
-
+    snowon_matched = snowon_matched.rio.write_crs(crs, inplace=True)
+    rfl_grid = rfl_grid.rio.reproject_match(snowon_matched)
+    ssa_grid = rfl_grid.copy()
+    
     # Call AART
     ssa_grid = aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6)
-    ssa_grid = ssa_grid.rio.set_crs(crs, inplace=True)
 
     return ssa_grid

@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - python=3.9
-  - python-pdal
+  - python-pdal=3.3.0
   - gdal
   - rioxarray
   - py3dep

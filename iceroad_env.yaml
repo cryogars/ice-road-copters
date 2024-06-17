@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.9
   - python-pdal=3.3.0
+  - pdal=2.6.2
   - gdal
   - rioxarray
   - py3dep

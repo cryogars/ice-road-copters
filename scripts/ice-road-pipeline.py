@@ -185,18 +185,12 @@ if __name__ == '__main__':
 
     # estimate ssa from reflectance using AART at 1064 nm.
     if shp_fp_rfl:
-        ssa_grid = ssa_pipeline(snowon_matched, cal_las, 
-                                shp_fp_rfl, imu_data, known_rfl, 
-                                json_dir, results_dir, ice_dir, in_dir, snow_tif)
-        ssa_fp = join(ice_dir, f'{basename(in_dir)}-ssa.tif')
-
-        # Set threshold for snow depth and canopy height
-        ssamask = canopyheight.rio.reproject_match(ssa_grid)
-        snowdepth = snowdepth.rio.reproject_match(ssa_grid)
-        ssamask = ssamask.where(ssamask <= 3, -100)
-        ssa_grid = ssa_grid.where(ssamask != -100)
-        ssa_grid = ssa_grid.where(snowdepth >= 0.08)
-        ssa_grid.rio.to_raster(ssa_fp)
+        ssa_pipeline(cal_las, shp_fp_rfl,
+                     imu_data, known_rfl,
+                     results_dir, ice_dir, 
+                     in_dir, snow_tif,
+                     snow_depth_path,
+                     canopy_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

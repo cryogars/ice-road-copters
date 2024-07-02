@@ -7,7 +7,6 @@ import pandas as pd
 from scipy import interpolate
 import logging
 import re
-import json
 import subprocess
 from subprocess import Popen, PIPE
 import os
@@ -25,8 +24,8 @@ def calc_transmittance(altitude_km,
                        lrt_dir='/Users/brent/Code/ice-road-copters/test', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=6.27 ,
-                       aod=0.052):
+                       h=5.93 ,
+                       aod=0.095):
     
     '''
 
@@ -122,9 +121,11 @@ def estimate_attenuation(lrt_dir='/Users/brent/Code/ice-road-copters/test'):
     return alpha
 
 
-def normalized_reflectance(cal_las, shp_fp_rfl,
-                           imu_data, known_rfl, json_dir,
-                           results_dir, ice_dir, in_dir, snow_tif):
+def ssa_pipeline(cal_las, shp_fp_rfl,
+                 imu_data, known_rfl,
+                 results_dir, ice_dir, 
+                 in_dir, snow_tif, 
+                 snowdepth_fp, canopy_fp):
     '''
     This function utilizes lidR package to leverage the use of key features such as translation,
     sample grid data, and apply math operations. With this being an R package, this function requires
@@ -135,9 +136,7 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
     In summary,
     1 of the n LAS fight data is input, LAS is shifted in X, Y, and Z direction based on ASP pc_align with translation only,
     Heli IMU data (X,Y,Z,t) is used to build vector between surface and sensor --> used to estimate incidence angles, 
-    Reflectance is normalized + cleaned, finally, a new .LAS file is created where X and Y are position, but Z is the reflectance.
-
-    Currently it is called within the SSA function below `ssa_pipeline`.
+    Reflectance is normalized + cleaned, and SSA is estimated based on AART.
 
     '''
 
@@ -145,15 +144,6 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
     ssa_dir = f'{results_dir}/ssa-calc'
     if not os.path.exists(ssa_dir):
         os.makedirs(ssa_dir)
-
-    rfl_fp_grid = f'{ssa_dir}/rfl-merged.tif'
-    if os.path.exists(rfl_fp_grid):
-        while True:
-            ans = input("SSA tif already exists. Enter y to overwrite and n to use existing:")
-            if ans.lower() == 'n':
-                return rfl_fp_grid
-            elif ans.lower() == 'y':
-                break
 
     # Make sure R is installed
     proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
@@ -183,15 +173,25 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
     # get crs
     ref_raster = rasterio.open(snow_tif)
     crs = ref_raster.crs
+
+    # Gdal-warp to 3m spatial resolution for DEM
+    dem_spacing = 3
+    new_dem_fp = join(ice_dir, f'{basename(in_dir)}-snowon_DEM_{dem_spacing}m.tif')
+    os.system(f'gdalwarp -r bilinear -t_srs {crs} \
+                -tr {dem_spacing} {dem_spacing} -overwrite {snow_tif} {new_dem_fp} -q')           
+
+    # New DEM
+    ref_raster = rasterio.open(new_dem_fp)
+    crs2 = ref_raster.crs
     pix_size, _ = ref_raster.res
-    crs = str(crs).split(":",1)[1]
+    crs = str(crs2).split(":",1)[1]
     log.info(f'Using pixel size: {pix_size} m and using CRS: {crs}.') 
 
     # Compute slope and aspect from snow-on lidar
     slope_fp = join(ice_dir, f'{basename(in_dir)}-snowon_slope.tif')
     aspect_fp = join(ice_dir, f'{basename(in_dir)}-snowon_aspect.tif')
-    os.system(f'gdaldem slope -compute_edges {snow_tif} {slope_fp} -q')
-    os.system(f'gdaldem aspect -compute_edges -zero_for_flat {snow_tif} {aspect_fp} -q')
+    os.system(f'gdaldem slope -compute_edges {new_dem_fp} {slope_fp} -q')
+    os.system(f'gdaldem aspect -compute_edges -zero_for_flat {new_dem_fp} {aspect_fp} -q')
     slope = rio.open_rasterio(slope_fp, masked=True)
     aspect = rio.open_rasterio(aspect_fp, masked=True)
 
@@ -233,48 +233,27 @@ def normalized_reflectance(cal_las, shp_fp_rfl,
         if las_name == ".DS_Store" or las_name == "ice-road":
             continue 
         
-        # Set file path to this specific .las in loop
-        rfl_fp = f'{ssa_dir}/{las_name}-rfl.las'
+        # Set file path to this specific .tif in loop
+        rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
+        rfl_fp_3m = f'{ssa_dir}/{las_name}-rfl_3m.tif'
+        ssa_fp = f'{ssa_dir}/{las_name}-ssa_3m.tif'
 
-        # Getting a translated "LAS" file
-        # "LAS" in quotations bc I am hiding the rfl here in "Z"
-        # with the intention to do fast IDW in the next step.
+        # Getting a RFL tif
         cl_call(f'Rscript {scripts_dir}/las_ssa_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} {snow_tif} \
-                {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data} {str(alpha)}', log)
+                {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data} {str(alpha)} \
+                {snowdepth_fp} {canopy_fp}', log)
+        
+        # Resample RFL tif to 3 m (from 0.5 m)
+        os.system(f'gdalwarp -r bilinear -t_srs {crs2} \
+            -tr {dem_spacing} {dem_spacing} -overwrite {rfl_fp} {rfl_fp_3m} -q')           
 
-    rfl_fp = f'{ssa_dir}/rfl-merged.las'
+        # Compute SSA
+        rfl_grid = rio.open_rasterio(rfl_fp_3m, masked=True)
+        ssa_grid = aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6)
+        ssa_grid.rio.to_raster(ssa_fp)
+        
 
-    # Prep PDAL commands
-    json_path = join(json_dir, 'combine-rfl.json')
-    json_pipeline = {
-        "pipeline": [
-            rfl_fp,
-            {
-                "type":"writers.gdal",
-                "filename":rfl_fp_grid,
-                "resolution":pix_size, 
-                "output_type":"idw"
-            }
-        ]
-    }
-    with open(json_path,'w') as outfile:
-        json.dump(json_pipeline, outfile, indent = 2) 
-
-    # Run PDAL commands
-    inp_str = ' '.join(glob(join(ssa_dir, '*.las')))
-    cl_call(f'pdal merge {inp_str} {rfl_fp}', log)       
-    cl_call(f'pdal pipeline {json_path}', log)  
-
-    # get CRS
-    ref_raster = rasterio.open(snow_tif)
-    crs = ref_raster.crs
-
-    # Match to snow-on raster
-    rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    rfl_grid = rfl_grid.rio.set_crs(crs, inplace=True)
-    rfl_grid.rio.to_raster(rfl_fp_grid)
-
-    return rfl_fp_grid
+    return
 
 
 
@@ -306,46 +285,5 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
 
     # Run AART - assuming all pixels are snow, directly solve SSA
     ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
-
-    return ssa_grid
-
-
-
-
-
-def ssa_pipeline(snowon_matched, cal_las, shp_fp_rfl,
-                 imu_data, known_rfl, json_dir,
-                 results_dir, ice_dir, in_dir, snow_tif):
-    '''
-    
-    Runs normalized_reflectance for each of the flight lines and merges into one raster.
-
-    Reprojects it correctly based on  already solved for DEM.
-
-    Calls AART snow model to estimate SSA (grain size).
-
-    
-    '''
-
-    # Run through each flightline and mosaic reflectance
-    rfl_fp_grid = normalized_reflectance(cal_las, 
-                                         shp_fp_rfl,
-                                         imu_data, 
-                                         known_rfl, 
-                                         json_dir,
-                                         results_dir, 
-                                         ice_dir, in_dir,
-                                         snow_tif)
- 
-    # Match to snow-on raster
-    rfl_grid = rio.open_rasterio(rfl_fp_grid, masked=True)
-    ref_raster = rasterio.open(snow_tif)
-    crs = ref_raster.crs
-    snowon_matched = snowon_matched.rio.write_crs(crs, inplace=True)
-    rfl_grid = rfl_grid.rio.reproject_match(snowon_matched)
-    ssa_grid = rfl_grid.copy()
-    
-    # Call AART
-    ssa_grid = aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6)
 
     return ssa_grid

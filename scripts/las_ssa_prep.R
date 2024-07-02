@@ -21,6 +21,8 @@ n_e_d_shift <- args[8]
 road_cal_factor <- args[9]
 imu_data <- args[10]
 alpha <- args[11]
+sd_fp <- args[12]
+chm_fp <- args[13]
 
 # PATH TO SURFACE RETURNS AND SET CRS
 crs <- as.numeric(crs)
@@ -46,21 +48,25 @@ x <- raster(ni_fp)
 y <- raster(nj_fp)
 z <- raster(nk_fp)
 elev <- raster(elev_fp)
+sd <- raster(sd_fp)
+chm <- raster(chm_fp)
 las <- merge_spatial(las, x, attribute = "n_i")
 las <- merge_spatial(las, y, attribute = "n_j")
 las <- merge_spatial(las, z, attribute = "n_k")
 las <- merge_spatial(las, elev, attribute = "elev")
+las <- merge_spatial(las, sd, attribute = "sd")
+las <- merge_spatial(las, chm, attribute = "chm")
 
-# CONVERT TO DF. FILTER OUT NA AND SELECT ONLY FIRST RETURNS.
+# FILTER POI (No canopy, only snow)
+las <- filter_poi(las, NumberOfReturns == 1)
+las <- filter_poi(las, ReturnNumber == 1)
+las <- filter_poi(las, n_i != "NA")
+las <- filter_poi(las, abs(Z-elev) < 50) # REMOVE NOISE ABOVE TREES
+las <- filter_poi(las, chm <= 0.01) # no Trees
+las <- filter_poi(las, sd > 0.08) # snow is present
+
+# GET AS DATATABLE
 df <- payload(las)
-df <- filter(df, NumberOfReturns == 1)
-df <- filter(df, ReturnNumber == 1)
-df <- filter(df, n_i != "NA")
-df <- filter(df, abs(Z-elev) < 50) # REMOVE NOISE ABOVE TREES
-# NOTE: I really only had trouble with noise on the Dec 8, 2022 flight. There seemed to be 
-# some sort of signal detected along the path of the helicopter right below it..
-# this noise looked worse for the Eagle boresight cal flights. I did not see this kind
-# of noise on the other flights i worked on.
 
 # HELI IMU DATA
 imu <- read_csv(imu_data,show_col_types = FALSE)
@@ -108,7 +114,17 @@ df <- filter(df, cosi>=0.50)
 df <- filter(df, rfl>=0.0)
 df <- filter(df, rfl<=1.0)
 
-# MAKE NEW TEMP LAS FILE THAT HOLD RFL AS THE Z VALUE
-lasheader = header_create(las)
+# TURN BACK INTO LAS FILE (W/ RFL AS Z)
 df$Z <- df$rfl
-write.las(rfl_fp, lasheader, df)
+df = subset(df, select = c(X, Y, Z))
+df$Classification <- as.integer(2)
+header = header_create(las)
+las <- LAS(df, header)
+st_crs(las) <- crs
+
+# RASTERIZE
+rfl_rast <- pixel_metrics(las, ~mean(Z), 0.5) # calculate mean at 0.5 m
+
+# SAVE
+writeRaster(rfl_rast, rfl_fp, overwrite=TRUE)
+

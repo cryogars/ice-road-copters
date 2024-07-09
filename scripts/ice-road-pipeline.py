@@ -38,7 +38,7 @@ import os
 from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
-from las2grain import ssa_pipeline
+from las2grain import grain_pipeline
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -183,14 +183,14 @@ if __name__ == '__main__':
     canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()), other=0)
     canopyheight.rio.to_raster(canopy_fp)
 
-    # estimate ssa from reflectance using AART at 1064 nm.
+    # estimate Optical Grain Size from reflectance using AART at 1064 nm.
     if shp_fp_rfl:
-        ssa_pipeline(cal_las, shp_fp_rfl,
-                     imu_data, known_rfl,
-                     results_dir, ice_dir, 
-                     in_dir, snow_tif,
-                     snow_depth_path,
-                     canopy_fp)
+        grain_pipeline(cal_las, shp_fp_rfl,
+                       imu_data, known_rfl,
+                       results_dir, ice_dir, 
+                       in_dir, snow_tif,
+                       snow_depth_path,
+                       canopy_fp)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

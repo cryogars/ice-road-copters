@@ -81,7 +81,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
     
     # Since there are issues in transforming the point cloud and retaining reflectance,
     # the best I can do is translation only and no rotation..
-    # Therefore, in this section, if the mode is set to calc SSA, an additional pc_align 
+    # Therefore, in this section, if the mode is set to calc Grain Size, an additional pc_align 
     # will be called in order to save the X,Y,Z translation only. This will not be applied
     # to the snow depth products, so there may be some subtle differences when comparing between the two. 
     # However, this is in hopes to retain the higher information where we can..

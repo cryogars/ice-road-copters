@@ -254,14 +254,14 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
     return
 
 
-
 def aart_1064(rfl_grid):
+
+
 
     '''
     Solves Optical Grain Size for AART at 1064 nm wavelength. 
     Assumes pixel is 100% snow and that lidar is pure backscatter.
     g=0.75 and b=1.6 are assumed
-
     This is a polynomial approximation that behaves quite well when compared to AART.
     R2 = 1.0 ;mean absolute error = 0.19 μm. 
 

@@ -206,7 +206,7 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
     log.info(f'Surface normal computed.') 
 
     # Estimate atmosph attenuation
-    alpha = estimate_attenuation()
+    alpha = estimate_attenuation()  
     log.info(f'extinction coefficient: {alpha}') 
 
     # Calcs calibration stats from target
@@ -254,34 +254,19 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
     return
 
 
+def aart_1064(rfl_grid):
 
 
-def aart_1064(rfl_grid, g=0.85, b=1.6):
 
     '''
     Solves Optical Grain Size for AART at 1064 nm wavelength. 
     Assumes pixel is 100% snow and that lidar is pure backscatter.
-    g=0.85 and b=1.6 are from Libois et al. (2013), however, other shapes may be used.
-
-    The cosine of light incidence angle with surface normal (cosi) 
-    is normalized by incidence angle in las_grain_prep.R, cosi is fixed at 1.
+    g=0.75 and b=1.6 are assumed
+    This is a polynomial approximation that behaves quite well when compared to AART.
+    R2 = 1.0 ;mean absolute error = 0.19 μm. 
 
     '''
 
-    log.info(f'Computing Optical Grain Size with AART using g={g} and b={b} .')  
-
-    theta = 180 # based on data it is almost always 179-180
-
-    # This is the imaginary refractive index of ice for the wavelength at 1064 nm (fixed). 
-    k_ice = 1.8983928418833426e-06
-
-    # This is the wavelength in nanometers, then multiplied to meters for computation (fixed).
-    wl = 1064*1e-9
-
-    # This is the density of ice in kg/m3 (fixed).
-    d_ice = 917
-
-    # Run AART - assuming all pixels are snow, directly solve Optical Grain Size
-    grain_grid = -1 * ((140625 *(g-1) * wl * np.log((8*rfl_grid) / (8.776+1.1 * np.exp(-0.014*theta) + 11.1 * np.exp(-0.087*theta)))**2) / (2 * np.pi *b * k_ice))
+    grain_grid = 18008 * (rfl_grid**6)  - 82840 * (rfl_grid**5)  + 161006 * (rfl_grid**4) - 171899 * (rfl_grid**3)  + 109726 * (rfl_grid**2)- 41764 * (rfl_grid**1)  + 7774.1  
 
     return grain_grid

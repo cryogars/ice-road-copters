@@ -206,8 +206,7 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
     log.info(f'Surface normal computed.') 
 
     # Estimate atmosph attenuation
-    #alpha = estimate_attenuation()
-    alpha = 0.0050   
+    alpha = estimate_attenuation()  
     log.info(f'extinction coefficient: {alpha}') 
 
     # Calcs calibration stats from target

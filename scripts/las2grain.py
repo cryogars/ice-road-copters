@@ -24,8 +24,8 @@ def calc_transmittance(altitude_km,
                        lrt_dir='/Users/brent/Code/ice-road-copters/test', 
                        path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
                        atmos='mw',
-                       h=5.93 ,
-                       aod=0.095):
+                       h=4.79 ,
+                       aod=0.073):
     
     '''
 
@@ -121,11 +121,9 @@ def estimate_attenuation(lrt_dir='/Users/brent/Code/ice-road-copters/test'):
     return alpha
 
 
-def ssa_pipeline(cal_las, shp_fp_rfl,
-                 imu_data, known_rfl,
-                 results_dir, ice_dir, 
-                 in_dir, snow_tif, 
-                 snowdepth_fp, canopy_fp):
+def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
+                   results_dir, ice_dir,in_dir, snow_tif, 
+                   snowdepth_fp, canopy_fp):
     '''
     This function utilizes lidR package to leverage the use of key features such as translation,
     sample grid data, and apply math operations. With this being an R package, this function requires
@@ -136,14 +134,14 @@ def ssa_pipeline(cal_las, shp_fp_rfl,
     In summary,
     1 of the n LAS fight data is input, LAS is shifted in X, Y, and Z direction based on ASP pc_align with translation only,
     Heli IMU data (X,Y,Z,t) is used to build vector between surface and sensor --> used to estimate incidence angles, 
-    Reflectance is normalized + cleaned, and SSA is estimated based on AART.
+    Reflectance is normalized + cleaned, and Optical Grain Size is estimated based on AART.
 
     '''
 
-    # Check whether ssa directory exists, if not, make one
-    ssa_dir = f'{results_dir}/ssa-calc'
-    if not os.path.exists(ssa_dir):
-        os.makedirs(ssa_dir)
+    # Check whether Optical Grain Size directory exists, if not, make one
+    grain_dir = f'{results_dir}/grain-calc'
+    if not os.path.exists(grain_dir):
+        os.makedirs(grain_dir)
 
     # Make sure R is installed
     proc = Popen(["which", "R"],stdout=PIPE,stderr=PIPE)
@@ -208,12 +206,13 @@ def ssa_pipeline(cal_las, shp_fp_rfl,
     log.info(f'Surface normal computed.') 
 
     # Estimate atmosph attenuation
-    alpha = estimate_attenuation()      
+    #alpha = estimate_attenuation()
+    alpha = 0.0050   
     log.info(f'extinction coefficient: {alpha}') 
 
     # Calcs calibration stats from target
-    output_csv = f'{ssa_dir}/all-calibration-rfl.csv'
-    cl_call(f'Rscript {scripts_dir}/las_ssa_cal.R {cal_las} {crs} {shp_fp_rfl} {n_e_d_shift} \
+    output_csv = f'{grain_dir}/all-calibration-rfl.csv'
+    cl_call(f'Rscript {scripts_dir}/las_grain_cal.R {cal_las} {crs} {shp_fp_rfl} {n_e_d_shift} \
             {output_csv} {imu_data} {str(pix_size)} {str(alpha)}', log)
 
     # Read in cal data and estimate factor
@@ -234,12 +233,12 @@ def ssa_pipeline(cal_las, shp_fp_rfl,
             continue 
         
         # Set file path to this specific .tif in loop
-        rfl_fp = f'{ssa_dir}/{las_name}-rfl.tif'
-        rfl_fp_3m = f'{ssa_dir}/{las_name}-rfl_3m.tif'
-        ssa_fp = f'{ssa_dir}/{las_name}-ssa_3m.tif'
+        rfl_fp = f'{grain_dir}/{las_name}-rfl.tif'
+        rfl_fp_3m = f'{grain_dir}/{las_name}-rfl_3m.tif'
+        grain_fp = f'{grain_dir}/{las_name}-grain_size_3m.tif'
 
         # Getting a RFL tif
-        cl_call(f'Rscript {scripts_dir}/las_ssa_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} {snow_tif} \
+        cl_call(f'Rscript {scripts_dir}/las_grain_prep.R {f} {crs} {ni_fp} {nj_fp} {nk_fp} {snow_tif} \
                 {rfl_fp} {n_e_d_shift} {road_cal_factor} {imu_data} {str(alpha)} \
                 {snowdepth_fp} {canopy_fp}', log)
         
@@ -247,10 +246,10 @@ def ssa_pipeline(cal_las, shp_fp_rfl,
         os.system(f'gdalwarp -r bilinear -t_srs {crs2} \
             -tr {dem_spacing} {dem_spacing} -overwrite {rfl_fp} {rfl_fp_3m} -q')           
 
-        # Compute SSA
+        # Compute Optical Grain Size
         rfl_grid = rio.open_rasterio(rfl_fp_3m, masked=True)
-        ssa_grid = aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6)
-        ssa_grid.rio.to_raster(ssa_fp)
+        grain_grid = aart_1064(rfl_grid, g=0.85, b=1.6)
+        grain_grid.rio.to_raster(grain_fp)
         
 
     return
@@ -258,19 +257,19 @@ def ssa_pipeline(cal_las, shp_fp_rfl,
 
 
 
-def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
+def aart_1064(rfl_grid, g=0.85, b=1.6):
 
     '''
-    Solves SSA for AART at 1064 nm wavelength. 
+    Solves Optical Grain Size for AART at 1064 nm wavelength. 
     Assumes pixel is 100% snow and that lidar is pure backscatter.
     g=0.85 and b=1.6 are from Libois et al. (2013), however, other shapes may be used.
 
     The cosine of light incidence angle with surface normal (cosi) 
-    is normalized by incidence angle in las_ssa_prep.R, cosi is fixed at 1.
+    is normalized by incidence angle in las_grain_prep.R, cosi is fixed at 1.
 
     '''
 
-    log.info(f'Computing SSA with AART using g={g} and b={b} .')  
+    log.info(f'Computing Optical Grain Size with AART using g={g} and b={b} .')  
 
     theta = 180 # based on data it is almost always 179-180
 
@@ -283,7 +282,7 @@ def aart_1064(rfl_grid, cosi=1, g=0.85, b=1.6):
     # This is the density of ice in kg/m3 (fixed).
     d_ice = 917
 
-    # Run AART - assuming all pixels are snow, directly solve SSA
-    ssa_grid = (6 * ((4 * np.pi * k_ice) / wl)) / (d_ice * (9*(1-g)) / (16*b) * (-np.log(rfl_grid / ((1.247 + 1.186 * (cosi + cosi) + 5.157 * cosi * cosi + (11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta))) / 4.0 / (cosi + cosi))))**2)
+    # Run AART - assuming all pixels are snow, directly solve Optical Grain Size
+    grain_grid = -1 * ((140625 *(g-1) * wl * np.log((8*rfl_grid) / (8.776+1.1 * np.exp(-0.014*theta) + 11.1 * np.exp(-0.087*theta)))**2) / (2 * np.pi *b * k_ice))
 
-    return ssa_grid
+    return grain_grid

@@ -17,6 +17,14 @@ from laz2dem import cl_call
 
 log = logging.getLogger(__name__)
 
+# NOTE TO SELF:
+# Build a LUT of libRadtran runs to facilitate use of alpha param, without BSU folks having to run the radiative transfer
+# This should be pretty straight forward. And the altitude distance should be roughly the same for flights.
+# I am sure i can get an r2 pretty high using an interpolation method like this..
+
+# ALSO, should consider switching to AOD-550 as more commmon with remote sensing products.
+# This may allow us to use a spatially varying AOD & H20 params if/when available.
+
 
 def calc_transmittance(altitude_km,
                        file_name,
@@ -247,7 +255,7 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
 
         # Compute Optical Grain Size
         rfl_grid = rio.open_rasterio(rfl_fp_3m, masked=True)
-        grain_grid = aart_1064(rfl_grid, g=0.85, b=1.6)
+        grain_grid = aart_1064(rfl_grid)
         grain_grid.rio.to_raster(grain_fp)
         
 

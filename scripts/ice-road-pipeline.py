@@ -2,7 +2,7 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] 
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]  
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -11,14 +11,16 @@ Options:
     -s shp_fp        Shapefile to align with
     -b buffer_meters Total width for the transform area
     -g geoid         Is the reference DEM in geoid
-    -r shp_fp_rfl    Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
+    -r shp_fp_rfl    (Optional) Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
                      "Intensity as Reflectance" returned by RIEGL.
-    -i imu_data      path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
+    -i imu_data      (Optional) Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
                      Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
-    -c cal_las       path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+    -c cal_las       (Optional) Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
-    -k known_rfl     Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
+    -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
+    -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
+    -o aod           (Optional) Aerosol optical depth at 550 nm (float) 
 
 """
 
@@ -92,6 +94,15 @@ if __name__ == '__main__':
     known_rfl = args.get('-k')
     if known_rfl:
         known_rfl = float(known_rfl)
+
+    h2o = args.get('-h')
+    if h2o:
+        h2o = float(h2o)
+
+    aod = args.get('-o')
+    if aod:
+        aod = float(aod)
+
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -190,7 +201,7 @@ if __name__ == '__main__':
                        results_dir, ice_dir, 
                        in_dir, snow_tif,
                        snow_depth_path,
-                       canopy_fp)
+                       canopy_fp, h2o, aod)
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

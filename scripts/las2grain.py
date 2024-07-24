@@ -18,112 +18,51 @@ from laz2dem import cl_call
 log = logging.getLogger(__name__)
 
 
-def calc_transmittance(altitude_km,
-                       file_name,
-                       path_to_libradtran_bin='/Users/brent/Documents/Albedo/libRadtran-2.0.4/bin', 
-                       lrt_dir='/Users/brent/Code/ice-road-copters/test', 
-                       path_to_libradtran_base='/Users/brent/Documents/Albedo/libRadtran-2.0.4/',
-                       atmos='mw',
-                       h=4.79 ,
-                       aod=0.073):
-    
-    '''
 
-    NOTE: h - H20 vapor in mm from AERONET
-          aod - is aerosol optical depth at 870 nm from AERONET 
-          altitude_km is the altitude of the AERONET station in Merdian, ID
-          atmos - assuming mid latitude winter
-
-          https://aeronet.gsfc.nasa.gov/
-
-    Both are from the Meridian_DEQ site. For now I have been updating h and aod variables for each date.
-    
-
-    On the physics, the attenuation is relatively small using our methodology, and only really shows a small 1% 
-    change when the range (or beam distance) varies largely from the calibration range at Eagle.
-
-    This function is used in a for loop to solve for extinction coef based on change in altitude and transmittance.
-
-
-
+def estimate_attenuation_LUT(h,aod):
 
     '''
+    Solving alpha using LUT
+
+    I built a Lookup-Table using the following range of values:
+            h20_range = [1, 3, 7, 10, 25, 50]
+            a550_range = [0.01, 0.1, 0.2,  0.6, 1.0]
     
+    These 30 simulations are saved within this function, and then are interpolated.
 
-    # Run here manually for irrad
-    fname = f'{lrt_dir}/{file_name}'
-    with open(f'{fname}.INP', 'w') as f:
-        f.write('source solar\n')  # extraterrestrial spectrum
-        f.write('wavelength 600 1100\n')  # set range for lambda
-        f.write(f'atmosphere_file {path_to_libradtran_base}/data/atmmod/afgl{atmos}.dat\n')
-        f.write(f'albedo {0.0}\n')  # 
-        f.write(f'umu 1 \n') # Cosine of the view zenith angle
-        f.write(f'phi 180 \n') # VAA
-        f.write('rte_solver disort\n')  # set disort
-        f.write('pseudospherical\n')# computed with spherical instead of plane parallel
-        f.write(f'mol_modify O3 300 DU\n')  #  
-        f.write(f'mol_abs_param reptran coarse\n')  #  
-        f.write(f'mol_modify H2O {h} MM\n')  #  
-        f.write(f'crs_model rayleigh bodhaine \n')  # 
-        f.write(f'zout sur\n')  # 
-        f.write(f'altitude {altitude_km}\n')  # altitude  
-        f.write(f'aerosol_default\n')  # 
-        f.write(f'aerosol_species_file continental_average\n')  # 
-        f.write(f'aerosol_set_tau_at_wvl 870 {aod}\n')  #    
-        f.write(f'output_quantity transmittance\n')  #outputs
-        f.write(f'output_user lambda eglo\n')  #outputs  
-        f.write('quiet')
+    User inputs:
+        h -  water column vapor in mm
+        aod - aerosol optical depth at 870 nm
 
-    cmd = f'{path_to_libradtran_bin}/uvspec < {fname}.INP > {fname}.out'
-    subprocess.run(cmd, shell=True, cwd=path_to_libradtran_bin)
-    
-    return
-
-
-
-
-def estimate_attenuation(lrt_dir='/Users/brent/Code/ice-road-copters/test'):
-
-    '''
-    This is a simple approach for solving for attenuation [km-1] where
-    the true altitude of Merdian AERONET is 0.808 km , and looping nearby to interpolate change.
+    Outputs:
+        alpha - attenuation [km-1]
 
     '''
 
-    # Run libRadtran for set of altitude
-    altitude_list = np.arange(0, 3.01, 0.25) # 12 runs
-    for alt in altitude_list:
-        calc_transmittance(alt, f'run_{alt}_km')
-    
-    # Interp data at 1064 nm
-    t_data = []
-    my_wavelengths = np.arange(1060, 1070.1, 1)
-    for alt in altitude_list: 
-        df_t = pd.read_csv(f'{lrt_dir}/run_{alt}_km.out', delim_whitespace=True, header=None)
-        df_t.columns = ['Wavelength', 'eglo']
-        # Compute t_up (upward transmittance)
-        fun_t = interpolate.interp1d(df_t['Wavelength'], df_t['eglo'], kind='slinear')
-        t_1064 = fun_t(my_wavelengths)[4]
-        t_data.append([alt, np.log(t_1064)])
-    t_array = np.array(t_data)
+    # Alphas solved for previously using libRadtran using mid-lat winter, O3=300 DU, and R[0-3 km] 
+    h_arr = np.array([1,  1,  1,  1,  1,  3,  3,  3,  3,  3,  7,  7,  7,  7,  7, 10,
+                      10, 10, 10, 10, 25, 25, 25, 25, 25, 50, 50, 50, 50, 50])
+    aod_arr = np.array([0.01, 0.1,  0.2,  0.6,  1., 0.01, 0.1,  0.2,  0.6,  1.,   
+                        0.01, 0.1,  0.2,  0.6, 1., 0.01, 0.1, 0.2,  0.6,  1.,   
+                        0.01, 0.1,  0.2,  0.6,  1.,   0.01, 0.1,  0.2,
+                        0.6,  1.  ])
+    alpha_arr = np.array([0.00332158, 0.00359646, 0.00390284, 0.00516555, 0.00648356, 0.00337639,
+                          0.0040808,  0.00487582, 0.00816571, 0.01158536, 0.00360503, 0.00626687,
+                          0.00930227, 0.02206811, 0.03556593, 0.0034354,  0.00443985, 0.00558133,
+                          0.01035168, 0.01535739, 0.00338004, 0.00341727, 0.00345433, 0.00358356,
+                          0.00369771, 0.00343997, 0.00345951, 0.00347671, 0.00352506, 0.00355757])
 
-    # Estimate slope. This is attenuation [km-1]
-    alpha ,_ = np.polyfit(t_array[:,0], t_array[:,1], 1)
+    #interpolation
+    f = interpolate.interp2d(h_arr, aod_arr, alpha_arr, kind = 'cubic')
+    alpha = f(h, aod)[0]
 
-    #print(alpha)
-    #import matplotlib.pyplot as plt
-    #plt.scatter(t_array[:,0], t_array[:,1])
-    #plt.xlabel('Altitude [km]')
-    #plt.ylabel(r'$ln(\tau)$')
-    #plt.show()
-
-    
     return alpha
+
 
 
 def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
                    results_dir, ice_dir,in_dir, snow_tif, 
-                   snowdepth_fp, canopy_fp):
+                   snowdepth_fp, canopy_fp, h2o, aod):
     '''
     This function utilizes lidR package to leverage the use of key features such as translation,
     sample grid data, and apply math operations. With this being an R package, this function requires
@@ -206,7 +145,8 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
     log.info(f'Surface normal computed.') 
 
     # Estimate atmosph attenuation
-    alpha = estimate_attenuation()  
+    alpha = estimate_attenuation_LUT(h=h2o, 
+                                     aod=aod)  
     log.info(f'extinction coefficient: {alpha}') 
 
     # Calcs calibration stats from target
@@ -247,7 +187,7 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
 
         # Compute Optical Grain Size
         rfl_grid = rio.open_rasterio(rfl_fp_3m, masked=True)
-        grain_grid = aart_1064(rfl_grid, g=0.85, b=1.6)
+        grain_grid = aart_1064(rfl_grid)
         grain_grid.rio.to_raster(grain_fp)
         
 

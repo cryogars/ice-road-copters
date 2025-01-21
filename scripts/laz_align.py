@@ -2,6 +2,8 @@
 from os.path import exists, join, basename, dirname, abspath, isdir
 from unittest import result
 import geopandas as gpd
+import rasterio
+import laspy
 from laz2dem import cl_call
 import json
 import logging
@@ -47,25 +49,40 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
     # Define paths for next if statement
     in_dem = join(result_dir, 'dem.tif')
     
+    # if Reference-DEM has geoid vertical datum, we use ASP to convert to ellispoid.
+    # NOTE: assumption is that your LiDAR data is in ellipsoid and has the correct CRS.
+    # If your LiDAR data does NOT have the correct CRS (or missing), this will fail.
     if dem_is_geoid is True:
-        # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-        nad83_dem = join(result_dir, 'demNAD_tmp.tif')
-        gdal_func = join(asp_dir, 'gdalwarp')
-        cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
+
+        # Load CRS from lidar
+        with laspy.open(input_laz) as las:
+            hdr = las.header
+            lidar_crs = hdr.parse_crs().to_epsg()
+            lidar_crs = f'EPSG:{lidar_crs}'
+            log.info(f'[Geoid conversion] CRS for WGS lidar: {lidar_crs}')
+
+        # Load CRS and nodata from DEM
+        ref_dem_geoid = rasterio.open(in_dem)
+        nodata_value = ref_dem_geoid.nodata
+        ref_dem_geoid_crs = ref_dem_geoid.crs
+        log.info(f'[Geoid conversion] CRS for NAVD88 Reference-DEM: {ref_dem_geoid_crs}')
+
         # Use ASP to convert from geoid to ellipsoid
         ellisoid_dem = join(result_dir, 'dem_wgs')
         geoid_func = join(asp_dir, 'dem_geoid')
-        cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
+        gdal_func = join(asp_dir, 'gdalwarp')
+        cl_call(f'{geoid_func} --nodata_value {nodata_value} {in_dem} \
                 --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
-        # Set it back to WGS84
+        
+        # Set it to WGS84 based on LiDAR CRS
         ref_dem = join(result_dir, 'ellipsoid_DEM.tif')
-        cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
+        cl_call(f'{gdal_func} -t_srs {lidar_crs} {ellisoid_dem}-adj.tif {ref_dem}', log)
 
         # check for success
         if not exists(ref_dem):
-            raise Exception('Conversion to ellipsoid failed')
+            raise Exception('[Geoid conversion] Conversion to ellipsoid failed')
 
-        log.info('Merged DEM converted to ellipsoid per user input')
+        log.info('[Geoid conversion] Merged DEM converted to ellipsoid per user input')
 
     else:
         # cl_call('cp '+ in_dem +' '+ ref_dem, log)
@@ -79,6 +96,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
     cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
                 {ref_dem} {clipped_pc} -o {align_pc}', log)
     
+    # FOR GRAIN SIZE CALCS
     # Since there are issues in transforming the point cloud and retaining reflectance,
     # the best I can do is translation only and no rotation..
     # Therefore, in this section, if the mode is set to calc Grain Size, an additional pc_align 
@@ -93,7 +111,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                     {ref_dem} {clipped_pc}   \
                     -o {transform_pc_temp}', log)     
         
-
+    # FOR NORMAL ICE-ROAD PIPELINE (includes rotation)
     # Apply transformation matrix to the entire laz and output points
     # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
     transform_pc = join(result_dir,'pc-transform',basename(final_tif))

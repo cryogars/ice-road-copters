@@ -114,8 +114,6 @@ if __name__ == '__main__':
         user_file_type = None
         raise Exception(f'User data needs to be in following format:{pc_ext} or {raster_ext}')
     
-
-
     # Make sure correct transformation selected, is their lidar in geoid, and they used the "to_ellipsoid" command mistakenly
     epsg_object = CRS.from_epsg(epsg)
     datum = epsg_object.datum.name
@@ -139,6 +137,7 @@ if __name__ == '__main__':
             datum_ref = pc_crs.datum.name
             datum_ref = code_datum(datum_ref)
         check_datum_do_not_match(datum, datum_ref)
+        log.info(f'PC datum: {datum_ref}')
 
         # geoid file to use from ASP
         geoid_data_str = 'navd88.tif'
@@ -148,7 +147,7 @@ if __name__ == '__main__':
         asp_geoid_data = join(parent_dir_asp, 'share', 'geoids', geoid_data_str)
 
         # corrected path to point cloud
-        corrected_pc = join(geoid_dir, f'reference-PC{extension}')
+        corrected_pc = join(geoid_dir, f'reference-PC.{extension}')
 
         # Next, Make a PDAL json...
         json_template = [

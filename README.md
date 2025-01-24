@@ -20,14 +20,14 @@ $ conda activate iceroad
 ```
 
 
-#### Running the code
+#### Running whole pipeline
 from the ice-road-copters directory for example one can run:
 ```
 $ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to> -b 3
 ```
-NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the WGS84 ellipsoid (EPSG:4326). If your reference DEM Coordinate Reference System (CRS) is orthometric (Geoid) you must set the `-g  True` flag. This prompts extraction of the CRS metadata and a subsequent coordinate transform. Users must supply a shape file clipped to the roadway through the domain. During co-registration, this code assumes a buffered road area of 3 meters (1.5m on either side of the centerline of the road). This buffered road area can be modifed with `-b` flag.
+Users must supply a shape file clipped to the roadway through the domain. During co-registration, this code assumes a buffered road area of 3 meters (1.5m on either side of the centerline of the road). This buffered road area can be modifed with `-b` flag.
 
-#### Flags
+##### Flags
 
 ```
 -e user_dem      Path to user specifed DEM [one will be downloaded from py3dep if you don't supply one]
@@ -40,9 +40,42 @@ NOTE: this code assumes you are using a reference DEM (and other airborne lidar 
 
 -b buffer_meters Total width for the transform area [Default: 3]
 
--g geoid         Is the reference DEM CRS orthometric (geoid height)? Will be auto set to True if you don't supply a DEM [Default: False]
+```
+
+NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `geoid_tool.py` to correct this.
+
+#### Transforming vertical datum
+
+As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
 
 ```
+$ python scripts/geoid_tool.py geoid_tool.py <path-to-reference-data> -l <path-to-lidar.laz> -t transform_command -a <dir-to-ASP-bin> -d debug
+```
+##### Flags
+
+```
+-l lidar_path            Path to a lidar file you wish to match (it can be small file, just needed for CRS)
+-t transform_command     which type of transformation to do [Options: to_ellipsoid or to_geoid]
+-a asp_dir               Directory with ASP binary files [Can be either ASP or ASP/bin directory]
+-d debug                 turns on debugging logging [Options: True or False]
+
+```
+
+
+
+###  Additional information :books:
+The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points. We also provide an option for a user specified DEM (snow-off).
+
+![heli_bsu](./docs/heli.png) 
+
+For example, we used prior knowledge that HWY-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP (using `pc_align`).
+
+![roads](./docs/roads.png)
+
+After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps with road differences on the cm scale.
+
+![snow](./docs/snow.jpeg)
+
 
 
 #### Optional: If estimating grain size, install R and the following packages 
@@ -60,17 +93,3 @@ library(sf)
 library(data.table)
 
 ```
-
-
-###  Additional information :books:
-The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points. We also provide an option for a user specified DEM (snow-off).
-
-![heli_bsu](./docs/heli.png) 
-
-For example, we used prior knowledge that HWY-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP (using `pc_align`).
-
-![roads](./docs/roads.png)
-
-After running pdal processing and ASP post-processing, we are able to generate accurate snow depth maps with road differences on the cm scale.
-
-![snow](./docs/snow.jpeg)

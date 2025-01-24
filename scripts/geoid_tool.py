@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Takes input reference dem data (point cloud or raster) and will transform from either geoid to ellipsoid, or ellipsoid to geoid.
 
@@ -103,8 +104,8 @@ if __name__ == '__main__':
 
     # Check what kind of file was given by user
     user_file_type = None
-    pc_ext = {'.las', '.laz', '.LAS', '.LAZ'}
-    raster_ext = {'.tif', '.tiff', '.TIF', '.TIFF'}
+    pc_ext = {'.las', '.laz'}
+    raster_ext = {'.tif', '.tiff'}
     extension = in_dir.lower().split('.')[-1]
     if f".{extension}" in pc_ext:
         user_file_type = 'Point Cloud'

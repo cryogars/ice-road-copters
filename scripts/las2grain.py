@@ -197,16 +197,32 @@ def grain_pipeline(cal_las, shp_fp_rfl,imu_data, known_rfl,
 def aart_1064(rfl_grid):
 
 
-
     '''
     Solves Optical Grain Size for AART at 1064 nm wavelength. 
     Assumes pixel is 100% snow and that lidar is pure backscatter.
     g=0.75 and b=1.6 are assumed
-    This is a polynomial approximation that behaves quite well when compared to AART.
-    R2 = 1.0 ;mean absolute error = 0.19 μm. 
+    This is an exact solution using algebra of Kokhanovsky et al. (2021).  
 
     '''
+    # Constants
+    LAM = 1064*1e-9
+    THETA = 180
+    COS_SZA = 1
+    COS_VZA = 1
+    K_EFF = 1.89839284188334E-06
+    G = 0.75
+    B = 1.6
 
-    grain_grid = 18008 * (rfl_grid**6)  - 82840 * (rfl_grid**5)  + 161006 * (rfl_grid**4) - 171899 * (rfl_grid**3)  + 109726 * (rfl_grid**2)- 41764 * (rfl_grid**1)  + 7774.1  
+    # AART
+    p = 11.1 * np.exp(-0.087 * THETA) + 1.1 * np.exp(-0.014 * THETA)
+    r0 = (1.247 + 1.186 * (COS_SZA + COS_VZA) + 5.157 * COS_SZA * COS_VZA + p) / (4.0 *(COS_SZA + COS_VZA))
+    eps =  (9*(1-G)) / (16*B)
+    gamma_i = (4 * np.pi * K_EFF) / LAM
+    u1 = 0.6*COS_SZA + 1. / 3. + np.sqrt(COS_SZA) / 3.
+    u2 = 0.6*COS_VZA + 1. / 3. + np.sqrt(COS_VZA) / 3.
+    f = (u1 * u2) / r0
+
+    # Eqn (12) in Wilder et al. (2025)
+    grain_grid = (((-np.ln((rfl_grid/r0)**(1/f)))^2) / (2 * eps * gamma_i)) * 1e6
 
     return grain_grid

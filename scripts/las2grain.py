@@ -205,21 +205,21 @@ def aart_1064(rfl_grid):
 
     '''
     # Constants
-    lam = 1064*1e-9
-    theta = 180
-    cos_sza = 1
-    cos_vza = 1
-    k_eff = 1.89839284188334E-06
-    g = 0.75
-    b = 1.6
+    LAM = 1064*1e-9
+    THETA = 180
+    COS_SZA = 1
+    COS_VZA = 1
+    K_EFF = 1.89839284188334E-06
+    G = 0.75
+    B = 1.6
 
     # AART
-    p = 11.1 * np.exp(-0.087 * theta) + 1.1 * np.exp(-0.014 * theta)
-    r0 = (1.247 + 1.186 * (cos_sza + cos_vza) + 5.157 * cos_sza * cos_vza + p) / 4.0 / (cos_sza + cos_vza)
-    eps =  (9*(1-g)) / (16*b)
-    gamma_i = (4 * np.pi * k_eff) / lam
-    u1 = 0.6*cos_sza + 1. / 3. + np.sqrt(cos_sza) / 3.
-    u2 = 0.6*cos_vza + 1. / 3. + np.sqrt(cos_vza) / 3.
+    p = 11.1 * np.exp(-0.087 * THETA) + 1.1 * np.exp(-0.014 * THETA)
+    r0 = (1.247 + 1.186 * (COS_SZA + COS_VZA) + 5.157 * COS_SZA * COS_VZA + p) / (4.0 *(COS_SZA + COS_VZA))
+    eps =  (9*(1-G)) / (16*B)
+    gamma_i = (4 * np.pi * K_EFF) / LAM
+    u1 = 0.6*COS_SZA + 1. / 3. + np.sqrt(COS_SZA) / 3.
+    u2 = 0.6*COS_VZA + 1. / 3. + np.sqrt(COS_VZA) / 3.
     f = (u1 * u2) / r0
 
     # Eqn (12) in Wilder et al. (2025)

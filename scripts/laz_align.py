@@ -2,8 +2,6 @@
 from os.path import exists, join, basename, dirname, abspath, isdir
 from unittest import result
 import geopandas as gpd
-import rasterio
-import laspy
 from laz2dem import cl_call
 import json
 import logging
@@ -46,48 +44,8 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
     log.info('Point cloud clipped to area')
 
-    # Define paths for next if statement
-    in_dem = join(result_dir, 'dem.tif')
-    
-    # if Reference-DEM has geoid vertical datum, we use ASP to convert to ellispoid.
-    # NOTE: assumption is that your LiDAR data is in ellipsoid and has the correct CRS.
-    # If your LiDAR data does NOT have the correct CRS (or missing), this will fail.
-    if dem_is_geoid is True:
-
-        # Load CRS from lidar
-        with laspy.open(input_laz) as las:
-            hdr = las.header
-            lidar_crs = hdr.parse_crs().to_epsg()
-            lidar_crs = f'EPSG:{lidar_crs}'
-            log.info(f'[Geoid conversion] CRS for WGS lidar: {lidar_crs}')
-
-        # Load CRS and nodata from DEM
-        ref_dem_geoid = rasterio.open(in_dem)
-        nodata_value = ref_dem_geoid.nodata
-        ref_dem_geoid_crs = ref_dem_geoid.crs
-        log.info(f'[Geoid conversion] CRS for NAVD88 Reference-DEM: {ref_dem_geoid_crs}')
-
-        # Use ASP to convert from geoid to ellipsoid
-        ellisoid_dem = join(result_dir, 'dem_wgs')
-        geoid_func = join(asp_dir, 'dem_geoid')
-        gdal_func = join(asp_dir, 'gdalwarp')
-        cl_call(f'{geoid_func} --nodata_value {nodata_value} {in_dem} \
-                --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
-        
-        # Set it to WGS84 based on LiDAR CRS
-        ref_dem = join(result_dir, 'ellipsoid_DEM.tif')
-        cl_call(f'{gdal_func} -t_srs {lidar_crs} {ellisoid_dem}-adj.tif {ref_dem}', log)
-
-        # check for success
-        if not exists(ref_dem):
-            raise Exception('[Geoid conversion] Conversion to ellipsoid failed')
-
-        log.info('[Geoid conversion] Merged DEM converted to ellipsoid per user input')
-
-    else:
-        # cl_call('cp '+ in_dem +' '+ ref_dem, log)
-        ref_dem = in_dem
-        log.info('Merged DEM was kept in original ellipsoid form...')
+    # Define paths
+    ref_dem = join(result_dir, 'dem.tif')
 
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
     align_pc = join(result_dir,'pc-align',basename(final_tif))

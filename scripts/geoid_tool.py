@@ -29,7 +29,21 @@ from dir_space_strip import replace_white_spaces
 from laz2dem import cl_call
 
 
+
+
 def check_datum_do_not_match(datum, datum_ref): 
+    '''
+    Ensure vertical datums do not already match. This is performed after `code_datum()`.
+
+    Inputs:
+        datum -  desired vertical datum input by user.
+        datum_ref - vertical datum read from input reference data.
+
+    Outputs:
+        None
+
+    '''
+
     if 'WGS'==datum_ref and 'WGS'==datum :
         raise Exception('Data already has ellipsoid vertical datum for both.')
     elif 'NAD'==datum_ref and 'NAD'==datum:
@@ -38,11 +52,180 @@ def check_datum_do_not_match(datum, datum_ref):
 
 
 def code_datum(datum): 
-    if 'WGS' in datum or 'World' in datum:
+    '''
+    Code the datum name to be either WGS or NAD. The idea here is that there are a limited number of possible options.
+    However, to keep downstream commands smooth, we code them into either WGS or NAD based on pyproj output. 
+
+    Inputs:
+        datum -  vertical datum given by pyproj output
+
+    Outputs:
+        datum - coded into either WGS or NAD
+
+    '''
+
+    if 'wgs' in datum.lower() or 'world' in datum.lower():
         datum = 'WGS'
-    elif 'NAD' in datum or 'North' in datum:
+    elif 'nad' in datum.lower() or 'north' in datum.lower():
         datum = 'NAD'
+    else: # unknown vertical datum
+        datum = None
     return datum
+
+
+
+def transform_pc(in_dir, epsg, asp_dir, log):
+    '''
+    If user reference data is a point cloud, performs geoid transformation using PDAL.
+
+    Inputs:
+        in_dir - absolute path to point cloud file input by user.
+        epsg - integer for EPSG code input by user.
+        asp_dir - absolute path to ASP bin directory.
+
+    Outputs:
+        corrected_data - absolute path to transformed data.
+
+    '''
+
+    # Do not allow transformation if they are already the same datum
+    with laspy.open(in_dir) as las:
+        hdr = las.header
+        pc_crs = hdr.parse_crs()
+        datum_ref = pc_crs.datum.name
+        datum_ref = code_datum(datum_ref)
+    check_datum_do_not_match(datum, datum_ref)
+    
+    # Log info for user
+    log.info(f'CRS for input data: {pc_crs}')
+    log.info(f'~~~~~~~~~~~~~~~~~~~~')
+    log.info(f'Input data vertical datum: {datum_ref}')
+
+    # Ensure vertical datum of user data is not None
+    if datum_ref is None:
+        raise Exception(f'Vertical datum was found as {datum_ref}. Check log file to inspect CRS.')
+
+    # geoid file to use from ASP
+    geoid_data_str = 'navd88.tif'
+
+    # Path to the geoid from Ames Stereo
+    parent_dir_asp = dirname(asp_dir)
+    asp_geoid_data = join(parent_dir_asp, 'share', 'geoids', geoid_data_str)
+
+    # corrected path to point cloud
+    corrected_data = join(geoid_dir, f'reference-PC.{extension}')
+
+    # Next, Make a PDAL json...
+    json_template = [
+        f"{in_dir}",
+        {
+            "type":"filters.reprojection",
+            "out_srs":f"+init=EPSG:{epsg} +geoidgrids={asp_geoid_data}"  
+        },
+        {
+            "type":"writers.las",
+            "a_srs":f"EPSG:{epsg}",
+            "filename":f"{corrected_data}"
+        }
+    ]
+
+    # Save json file
+    json_to_use = join(geoid_dir, 'geoid_transformation.json')
+    with open(json_to_use,'w') as outfile:
+        json.dump(json_template, outfile, indent = 2)
+
+    # Setting up command
+    pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
+    log.debug(f"Using pipeline command: {pipeline_cmd}")
+
+    # run command
+    cl_call(pipeline_cmd, log)
+
+
+    return corrected_data
+
+
+
+
+def transform_raster(in_dir, epsg, asp_dir, transform_command, log ):
+    '''
+    If user reference data is a raster, performs geoid transformation using Ames Stereo Pipeline.
+
+    Inputs:
+        in_dir - absolute path to raster file input by user.
+        epsg - integer for EPSG code input by user.
+        asp_dir - absolute path to ASP bin directory.
+        transform_command - either "to_geoid" or "to_ellipsoid".
+
+    Outputs:
+        corrected_data - absolute path to transformed data.
+
+    '''
+     # Check transform command and code to ASP commands
+    if transform_command == 'to_ellipsoid':
+        transform_cmd_for_asp = '--reverse-adjustment'
+    elif transform_command == 'to_geoid':
+        transform_cmd_for_asp = ''
+    else:
+        raise Exception(f'transform command must be either "to_geoid" or "to_ellipsoid"')
+
+    # Load CRS and nodata from DEM
+    ref_dem = rasterio.open(in_dir)
+    nodata_value = ref_dem.nodata
+    ref_dem_crs = ref_dem.crs.to_epsg()
+
+    # Do not allow transformation if they are already the same datum
+    epsg_object = CRS.from_epsg(ref_dem_crs)
+    datum_ref = epsg_object.datum.name
+    datum_ref = code_datum(datum_ref)
+    check_datum_do_not_match(datum, datum_ref)
+
+    # Log info for user
+    log.info(f'CRS for input data: {ref_dem_crs}')
+    log.info(f'~~~~~~~~~~~~~~~~~~~~')
+    log.info(f'Input data vertical datum: {datum_ref}')
+
+    # Ensure vertical datum of user data is not None
+    if datum_ref is None:
+        raise Exception(f'Vertical datum was found as {datum_ref}. Check log file to inspect CRS.')
+
+    # Use ASP to convert
+    # set up post tranform path
+    transform_dem = join(geoid_dir, 'temp-transform')
+
+    # set up calls to ASP
+    geoid_func = join(asp_dir, 'dem_geoid')
+    gdal_func = join(asp_dir, 'gdalwarp')
+    geoid_cmd = 'NAVD88'
+
+    # Do each case
+    # if the starting datum is in NAD and we want WGS do...
+    if datum_ref=='NAD' and datum=='WGS':
+
+        # Call geoid_func (dem_geoid)
+        # NOTE: GEOID -> ELLIP === --reverse-adjustment ... other way is blank
+        cl_call(f'{geoid_func} --nodata_value {nodata_value} {in_dir} \
+                --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
+
+    # if the starting datum is in WGS and want to do NAD we have to reproject it first.
+    elif datum_ref=='WGS' and datum=='NAD':
+
+        # Match projection first prior to geoid transform
+        warp_dem = join(geoid_dir, 'temp-warp.tif')
+        
+        cl_call(f'{gdal_func} -t_srs EPSG:{epsg} {in_dir} {warp_dem}', log)
+
+        cl_call(f'{geoid_func} --nodata_value {nodata_value} {warp_dem} \
+                --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
+
+
+    # Match CRS now to lidar (assign, it gets lost in ASP)
+    corrected_data = join(geoid_dir, 'reference-DEM.tif')
+    cl_call(f'{gdal_func} -t_srs EPSG:{epsg} {transform_dem}-adj.tif {corrected_data}', log)
+
+
+    return corrected_data
+
 
 
 
@@ -112,143 +295,42 @@ if __name__ == '__main__':
     elif f".{extension}" in raster_ext:
         user_file_type = 'Raster'
     else:
-        user_file_type = None
         raise Exception(f'User data needs to be in following format:{pc_ext} or {raster_ext}')
     
     # Make sure correct transformation selected, is their lidar in geoid, and they used the "to_ellipsoid" command mistakenly
     epsg_object = CRS.from_epsg(epsg)
     datum = epsg_object.datum.name
     datum = code_datum(datum)
-    if 'WGS'==datum in datum and transform_command == 'to_geoid':
+    if 'WGS'== datum and transform_command == 'to_geoid':
         raise Exception(f'Your target is to get to ellipsoid based on input. You should use "to_ellipsoid".')
-    elif 'NAD' ==datum and transform_command == 'to_ellipsoid':
+    elif 'NAD' == datum and transform_command == 'to_ellipsoid':
         raise Exception(f'Your target is to get to geoid based on input. You should use "to_geoid".')
     else:
-        pass
+        log.info('Transform command is valid given the target EPSG.')
 
-    # run main functions
-    # Either Point Cloud or Raster...
+    # run either transform_pc() or transform_raster()
     if user_file_type == 'Point Cloud':
         log.info(f'Starting run with {user_file_type} data type using PDAL.')
-
-        # Do not allow transformation if they are already the same datum
-        with laspy.open(in_dir) as las:
-            hdr = las.header
-            pc_crs = hdr.parse_crs()
-            datum_ref = pc_crs.datum.name
-            datum_ref = code_datum(datum_ref)
-        check_datum_do_not_match(datum, datum_ref)
-        log.info(f'PC datum: {datum_ref}')
-
-        # geoid file to use from ASP
-        geoid_data_str = 'navd88.tif'
-
-        # Path to the geoid from Ames Stereo
-        parent_dir_asp = dirname(asp_dir)
-        asp_geoid_data = join(parent_dir_asp, 'share', 'geoids', geoid_data_str)
-
-        # corrected path to point cloud
-        corrected_pc = join(geoid_dir, f'reference-PC.{extension}')
-
-        # Next, Make a PDAL json...
-        json_template = [
-            f"{in_dir}",
-            {
-                "type":"filters.reprojection",
-                "out_srs":f"+init=EPSG:{epsg} +geoidgrids={asp_geoid_data}"  
-            },
-            {
-                "type":"writers.las",
-                "a_srs":f"EPSG:{epsg}",
-                "filename":f"{corrected_pc}"
-            }
-        ]
-
-        # Save json file
-        json_to_use = join(geoid_dir, f'geoid_transformation.json')
-        with open(json_to_use,'w') as outfile:
-            json.dump(json_template, outfile, indent = 2)
-
-        # Setting up command
-        pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
-        log.debug(f"Using pipeline command: {pipeline_cmd}")
-
-        # run command
-        cl_call(pipeline_cmd, log)
-
-        # check for success
-        if not exists(corrected_pc):
-            raise Exception('Transformation failed.')
-
-        log.info('Reference PC transformed successfully')
-
+        corrected_data = transform_pc(in_dir=in_dir, 
+                                      epsg=epsg, 
+                                      asp_dir=asp_dir, 
+                                      log=log)
 
     elif user_file_type == 'Raster':
         log.info(f'Starting run with {user_file_type} data type using Ames Stereo Pipeline.')
-
-        # Check transform command
-        if transform_command == 'to_ellipsoid':
-            transform_cmd_for_asp = '--reverse-adjustment'
-        elif transform_command == 'to_geoid':
-            transform_cmd_for_asp = ''
-        else:
-            raise Exception(f'transform command must be either "to_geoid" or "to_ellipsoid"')
-
-        # Load CRS and nodata from DEM
-        ref_dem = rasterio.open(in_dir)
-        nodata_value = ref_dem.nodata
-        ref_dem_crs = ref_dem.crs.to_epsg()
-        log.info(f'CRS for Reference-DEM: {ref_dem_crs}')
-
-        # Do not allow transformation if they are already the same datum
-        epsg_object = CRS.from_epsg(ref_dem_crs)
-        datum_ref = epsg_object.datum.name
-        datum_ref = code_datum(datum_ref)
-        check_datum_do_not_match(datum, datum_ref)
-          
-        # Use ASP to convert
-        # set up post tranform path
-        transform_dem = join(geoid_dir, 'temp-transform')
-
-        # set up calls to ASP
-        geoid_func = join(asp_dir, 'dem_geoid')
-        gdal_func = join(asp_dir, 'gdalwarp')
-        geoid_cmd = 'NAVD88'
-
-        # Do each case
-        # if the starting datum is in NAD and we want WGS do...
-        if datum_ref=='NAD' and datum=='WGS':
-
-            # Call geoid_func (dem_geoid)
-            # NOTE: GEOID -> ELLIP === --reverse-adjustment ... other way is blank
-            cl_call(f'{geoid_func} --nodata_value {nodata_value} {in_dir} \
-                    --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
-
-        # if the starting datum is in WGS and want to do NAD we have to reproject it first.
-        elif datum_ref=='WGS' and datum=='NAD':
-   
-            # Match projection first prior to geoid transform
-            warp_dem = join(geoid_dir, 'temp-warp.tif')
-            
-            cl_call(f'{gdal_func} -t_srs EPSG:{epsg} {in_dir} {warp_dem}', log)
-
-            cl_call(f'{geoid_func} --nodata_value {nodata_value} {warp_dem} \
-                    --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
-
-
-        # Match CRS now to lidar (assign, it gets lost in ASP)
-        corrected_dem = join(geoid_dir, 'reference-DEM.tif')
-        cl_call(f'{gdal_func} -t_srs EPSG:{epsg} {transform_dem}-adj.tif {corrected_dem}', log)
-
-        # check for success
-        if not exists(corrected_dem):
-            raise Exception('Transformation failed.')
-
-        log.info('Reference DEM transformed successfully')
+        corrected_data = transform_raster(in_dir=in_dir, 
+                                          epsg=epsg, 
+                                          asp_dir=asp_dir, 
+                                          transform_command=transform_command,
+                                          log=log)
 
     else:
-        # case already taken care of above
-        pass
+        raise Exception(f'User data needs to be in following format:{pc_ext} or {raster_ext}')
+
+    # check for success
+    if not exists(corrected_data):
+        raise Exception('Transformation failed.')
+    log.info('Reference data transformed successfully')
 
     end_time = datetime.now()
     log.info(f"Completed! Run Time: {end_time - start_time}")

@@ -57,7 +57,7 @@ $ python scripts/geoid_tool.py <path-to-reference-data> -e epsg -t transform_com
 
 ```
 -e epsg                   Desired EPSG code you want (for example, 32611)
--t transform_command      Either "to_geoid" or "to_ellipsoid"
+-t transform_command      Options: to_geoid , to_ellipsoid
 -a asp_dir                Directory with ASP binary files
 -d debug                  turns on debugging logging
 ```

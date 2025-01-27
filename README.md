@@ -4,15 +4,16 @@
 
 [![DOI](https://zenodo.org/badge/505257224.svg)](https://zenodo.org/badge/latestdoi/505257224)
 
-### Overview
-The ice-road-copter suite is designed to post-process point cloud data and enable differencing to resolve change in repeat collections. Our focus is snow depth maps. DEM differencing for snow depths requires detailed knowledge of Coordinate Reference Systems (CRS) for the reference product (snow-free) and other products (snow-on). Alignment issues often persist even when both products are tied to the same CRS, and this needs to be addressed with a co-registration process.  The software relies on the Point Data Abstraction Library (PDAL; www.pdal.io) for point cloud filtering and segmentation.  NASA's Ames Stereo Pipeline  (https://github.com/NeoGeographyToolkit/StereoPipeline) performs the co-registration component of the workflow.  The software is designed to use plowed roadways through the survey domain as co-registration objects, as the snow-covered domain often lacks stable features.   
-###  Setting things up! :hammer:
-#### Downloading ASP precompiled binaries
+## Overview
+The ice-road-copter suite is designed to post-process point cloud data and enable differencing to resolve change in repeat collections. Our focus is snow depth maps. DEM differencing for snow depths requires detailed knowledge of Coordinate Reference Systems (CRS) for the reference product (snow-free) and other products (snow-on). Alignment issues often persist even when both products are tied to the same CRS, and this needs to be addressed with a co-registration process.  The software relies on the Point Data Abstraction Library (PDAL; www.pdal.io) for point cloud filtering and segmentation.  NASA's Ames Stereo Pipeline  (https://github.com/NeoGeographyToolkit/StereoPipeline) performs the co-registration component of the workflow.  The software is designed to use plowed roadways through the survey domain as co-registration objects, as the snow-covered domain often lacks stable features.  
+
+##  Setting things up! :hammer:
+### Downloading ASP precompiled binaries
 1. Download latest stable build (Linux or OSx): https://github.com/NeoGeographyToolkit/StereoPipeline/releases and unzip the folder into the ice-road-copters directory. There are different builds for each OS, but you may have to dig a little to find the OSx build, it gets updated less.
 2. Rename this folder as `ASP` and remove the zipped file
 
 
-#### Setting up Conda environment 
+## Setting up Conda environment 
 
 ```
 $ conda env create -f iceroad_env.yaml
@@ -20,14 +21,14 @@ $ conda activate iceroad
 ```
 
 
-### Running whole pipeline
+## Running whole pipeline
 from the ice-road-copters directory for example one can run:
 ```
 $ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to> -b 3
 ```
 Users must supply a shape file clipped to the roadway through the domain. During co-registration, this code assumes a buffered road area of 3 meters (1.5m on either side of the centerline of the road). This buffered road area can be modifed with `-b` flag.
 
-##### Flags
+### Flags
 
 ```
 -e user_dem      Path to user specifed DEM [one will be downloaded from py3dep if you don't supply one]
@@ -44,7 +45,7 @@ Users must supply a shape file clipped to the roadway through the domain. During
 
 NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `geoid_tool.py` to correct this.
 
-### Transforming vertical datum
+## Transforming vertical datum
 
 As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
 
@@ -52,7 +53,7 @@ As stated above, if your vertical datum differs between your point cloud and ref
 $ python scripts/geoid_tool.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin> -d debug
 ```
 
-##### Flags
+### Flags
 
 ```
 -e epsg                   Desired EPSG code you want (for example, 32611)
@@ -61,7 +62,7 @@ $ python scripts/geoid_tool.py <path-to-reference-data> -e epsg -t transform_com
 -d debug                  turns on debugging logging
 ```
 
-###  Additional information :books:
+## Additional information :books:
 The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points. We also provide an option for a user specified DEM (snow-off).
 
 ![heli_bsu](./docs/heli.png) 

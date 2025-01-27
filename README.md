@@ -20,7 +20,7 @@ $ conda activate iceroad
 ```
 
 
-#### Running whole pipeline
+### Running whole pipeline
 from the ice-road-copters directory for example one can run:
 ```
 $ python scripts/ice-road-pipeline.py <path-to-directory-of-laz-files> -e <path-to-user-supplied-reference-dem> -a <path-to-ASP-directory> -s <path-to-road-shapefile-to-clip-to> -b 3
@@ -44,24 +44,22 @@ Users must supply a shape file clipped to the roadway through the domain. During
 
 NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `geoid_tool.py` to correct this.
 
-#### Transforming vertical datum
+### Transforming vertical datum
 
 As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
 
 ```
-$ python scripts/geoid_tool.py <path-to-reference-data> -l <path-to-lidar.laz> -t transform_command -a <dir-to-ASP-bin> -d debug
+$ python scripts/geoid_tool.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin> -d debug
 ```
+
 ##### Flags
 
 ```
--l lidar_path            Path to a lidar file you wish to match (it can be small file, just needed for CRS)
--t transform_command     which type of transformation to do [Options: to_ellipsoid or to_geoid]
--a asp_dir               Directory with ASP binary files [Can be either ASP or ASP/bin directory]
--d debug                 turns on debugging logging [Options: True or False]
-
+-e epsg                   Desired EPSG code you want (for example, 32611)
+-t transform_command      Either "to_geoid" or "to_ellipsoid"
+-a asp_dir                Directory with ASP binary files
+-d debug                  turns on debugging logging
 ```
-
-
 
 ###  Additional information :books:
 The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points. We also provide an option for a user specified DEM (snow-off).

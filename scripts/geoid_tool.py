@@ -29,7 +29,9 @@ from dir_space_strip import replace_white_spaces
 from laz2dem import cl_call
 
 
-
+# Constants
+WGS = 'WGS'
+NAD = 'NAD'
 
 def check_datum_do_not_match(datum, datum_ref): 
     '''
@@ -44,9 +46,9 @@ def check_datum_do_not_match(datum, datum_ref):
 
     '''
 
-    if 'WGS'==datum_ref and 'WGS'==datum :
+    if WGS==datum_ref and WGS==datum :
         raise Exception('Data already has ellipsoid vertical datum for both.')
-    elif 'NAD'==datum_ref and 'NAD'==datum:
+    elif NAD==datum_ref and NAD==datum:
         raise Exception('Data already has geoid vertical datum for both.')
     return
 
@@ -65,13 +67,12 @@ def code_datum(datum):
     '''
 
     if 'wgs' in datum.lower() or 'world' in datum.lower():
-        datum = 'WGS'
+        datum = WGS
     elif 'nad' in datum.lower() or 'north' in datum.lower():
-        datum = 'NAD'
+        datum = NAD
     else: # unknown vertical datum
         datum = None
     return datum
-
 
 
 def transform_pc(in_dir, epsg, asp_dir, log):
@@ -145,8 +146,6 @@ def transform_pc(in_dir, epsg, asp_dir, log):
     return corrected_data
 
 
-
-
 def transform_raster(in_dir, epsg, asp_dir, transform_command, log ):
     '''
     If user reference data is a raster, performs geoid transformation using Ames Stereo Pipeline.
@@ -200,7 +199,7 @@ def transform_raster(in_dir, epsg, asp_dir, transform_command, log ):
 
     # Do each case
     # if the starting datum is in NAD and we want WGS do...
-    if datum_ref=='NAD' and datum=='WGS':
+    if datum_ref==NAD and datum==WGS:
 
         # Call geoid_func (dem_geoid)
         # NOTE: GEOID -> ELLIP === --reverse-adjustment ... other way is blank
@@ -208,7 +207,7 @@ def transform_raster(in_dir, epsg, asp_dir, transform_command, log ):
                 --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
 
     # if the starting datum is in WGS and want to do NAD we have to reproject it first.
-    elif datum_ref=='WGS' and datum=='NAD':
+    elif datum_ref==WGS and datum==NAD:
 
         # Match projection first prior to geoid transform
         warp_dem = join(geoid_dir, 'temp-warp.tif')
@@ -225,8 +224,6 @@ def transform_raster(in_dir, epsg, asp_dir, transform_command, log ):
 
 
     return corrected_data
-
-
 
 
 if __name__ == '__main__':
@@ -301,9 +298,9 @@ if __name__ == '__main__':
     epsg_object = CRS.from_epsg(epsg)
     datum = epsg_object.datum.name
     datum = code_datum(datum)
-    if 'WGS'== datum and transform_command == 'to_geoid':
+    if WGS==datum and transform_command == 'to_geoid':
         raise Exception(f'Your target is to get to ellipsoid based on input. You should use "to_ellipsoid".')
-    elif 'NAD' == datum and transform_command == 'to_ellipsoid':
+    elif NAD==datum and transform_command == 'to_ellipsoid':
         raise Exception(f'Your target is to get to geoid based on input. You should use "to_geoid".')
     else:
         log.info('Transform command is valid given the target EPSG.')

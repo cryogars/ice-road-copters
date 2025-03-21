@@ -3,13 +3,14 @@
 Takes input reference dem data (point cloud or raster) and will transform horizontal and vertical references.
 
 Usage:
-    transform_data.py <reference_data> [-e epsg] [-t transform_command] [-a asp_dir] [-d debug]
+    transform_data.py <reference_data> [-e epsg] [-t transform_command] [-a asp_dir] [-d debug] [-u]
 
 Options:
     -e epsg                   Desired EPSG code you want (for example, 32611)
     -t transform_command      Either "to_geoid" or "to_ellipsoid"
     -a asp_dir                Directory with ASP binary files
-    -d debug                  turns on debugging logging
+    -d debug                  Turns on debugging logging
+    -u                        DANGER ZONE:  call flag to use (used for USGS 3DEP lidar data)
 
 """
 import json
@@ -75,7 +76,7 @@ def code_datum(datum):
     return datum
 
 
-def transform_pc(in_dir, epsg, asp_dir, log):
+def transform_pc(in_dir, epsg, asp_dir,log, user_override):
     '''
     If user reference data is a point cloud, performs geoid transformation using PDAL.
 
@@ -89,13 +90,15 @@ def transform_pc(in_dir, epsg, asp_dir, log):
 
     '''
 
-    # Do not allow transformation if they are already the same datum
+    # Do not allow transformation if they are already the same datum (unless override by user)
     with laspy.open(in_dir) as las:
         hdr = las.header
         pc_crs = hdr.parse_crs()
         datum_ref = pc_crs.datum.name
         datum_ref = code_datum(datum_ref)
-    check_datum_do_not_match(datum, datum_ref)
+    
+    if user_override==0:
+        check_datum_do_not_match(datum, datum_ref)
     
     # Log info for user
     log.info(f'CRS for input data: {pc_crs}')
@@ -103,7 +106,7 @@ def transform_pc(in_dir, epsg, asp_dir, log):
     log.info(f'Input data vertical datum: {datum_ref}')
 
     # Ensure vertical datum of user data is not None
-    if datum_ref is None:
+    if datum_ref is None and user_override ==0:
         raise Exception(f'Vertical datum was found as {datum_ref}. Check log file to inspect CRS.')
 
     # geoid file to use from ASP
@@ -234,13 +237,15 @@ if __name__ == '__main__':
     args = docopt(__doc__)
     in_dir = args.get('<reference_data>')
     in_dir = abspath(in_dir)
-
     epsg = int(args.get('-e'))
-
     transform_command = args.get('-t')
-
     debug = args.get('-d')
-
+    user_override = args.get('-u')
+    if user_override:
+        user_override == 1
+    else:
+        user_override = 0
+    print(user_override)
     asp_dir = args.get('-a')
     if asp_dir:
         asp_dir = abspath(asp_dir)
@@ -314,7 +319,8 @@ if __name__ == '__main__':
         corrected_data = transform_pc(in_dir=in_dir, 
                                       epsg=epsg, 
                                       asp_dir=asp_dir, 
-                                      log=log)
+                                      log=log,
+                                      user_override=user_override)
 
     elif user_file_type == 'Raster':
         log.info(f'Starting run with {user_file_type} data type using Ames Stereo Pipeline.')

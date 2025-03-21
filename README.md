@@ -49,7 +49,7 @@ NOTE: this code assumes you are using a reference DEM (and other airborne lidar 
 As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
 
 ```
-$ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin> -d debug
+$ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin>
 ```
 
 ### Flags

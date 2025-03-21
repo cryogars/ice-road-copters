@@ -49,6 +49,8 @@ if __name__ == '__main__':
     user_dem = args.get('-e')
     if user_dem:
         user_dem = abspath(user_dem)
+    else:
+        raise Exception("User reference DEM is required.")
     geoid = args.get('-g')
     if not user_dem:
         geoid = True

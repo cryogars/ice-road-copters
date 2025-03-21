@@ -62,11 +62,10 @@ $ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform
 ```
 
 ## Additional information :books:
-The goal of this program is to utilize existing USGS 3DEP 1m topography data (via [py3dep](https://github.com/hyriver/py3dep)) and Ames Stereo Pipeline ([ASP](https://github.com/NeoGeographyToolkit/StereoPipeline)) software to accurately align snow-on airborne lidar point clouds to real world coordinates without the use of ground control points. We also provide an option for a user specified DEM (snow-off).
 
 ![heli_bsu](./docs/heli.png) 
 
-For example, we used prior knowledge that HWY-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP (using `pc_align`).
+For example, in our study at Boise State we used prior knowledge that SR-21 running through our study site is kept snow-free for a majority of the year, thus making excellent virtual ground control points for post-processing in ASP (using `pc_align`). It contains plenty of points, elevation change, and switchbacks to allow for a good fit.
 
 ![roads](./docs/roads.png)
 
@@ -79,6 +78,9 @@ After running pdal processing and ASP post-processing, we are able to generate a
 #### Optional: If estimating grain size, install R and the following packages 
 
 See `ice-road-pipeline.py` for the additional optional flags. This currently requires a target with a known reflectance in order to calibrate lidar reflectance. It assumes wavelength = 1064 nm.
+
+This is very experimental but you can read more about this work here: 
+Wilder et al. (2025). Modeling snow optical properties from single wavelength airborne lidar in steep forested terrain. Frontiers in Earth Science, 13, 1487776.
 
 ```
 library(raster)

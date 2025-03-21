@@ -59,6 +59,7 @@ $ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform
 -t transform_command      Options: to_geoid , to_ellipsoid
 -a asp_dir                Directory with ASP binary files
 -d debug                  turns on debugging logging
+-u                        Danger Zone: call flag to user override datum (used for USGS 3DEP lidar data)
 ```
 
 ## Additional information :books:

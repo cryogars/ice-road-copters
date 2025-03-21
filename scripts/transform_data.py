@@ -76,6 +76,8 @@ def transform_pc(in_dir, epsg, asp_dir, geoid_dir, geoid_model, log):
     corrected_data = join(geoid_dir, f'reference-PC.{extension}')
 
     # Next, Make a PDAL json
+    # TODO: similar to ASP method below, it would be better to get the horiz ref its in first...
+    # TODO: consider ellipsoid shifts, how to write in gdal warp and how to work into pdal?
     json_template = [
         f"{in_dir}",
         {
@@ -166,6 +168,7 @@ def transform_raster(in_dir, epsg, asp_dir, geoid_dir, geoid_model, transform_co
             --geoid {geoid_cmd} {transform_cmd_for_asp} -o {transform_dem}', log)
     
     # Match CRS now to lidar (assign, it gets lost in ASP)
+    # TODO: this is wrong though, because it could be say 26911.. I would actually need to gdalwarp 
     corrected_data = join(geoid_dir, 'reference-DEM.tif')
     cl_call(f'{gdal_func} -t_srs EPSG:{epsg} {transform_dem}-adj.tif {corrected_data}', log)
 

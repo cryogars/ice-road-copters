@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-Takes input reference dem data (point cloud or raster) and will transform from either geoid to ellipsoid, or ellipsoid to geoid.
+Takes input reference dem data (point cloud or raster) and will transform horizontal and vertical references.
 
 Usage:
-    geoid_tool.py <reference_data> [-e epsg] [-t transform_command] [-a asp_dir] [-d debug]
+    transform_data.py <reference_data> [-e epsg] [-t transform_command] [-a asp_dir] [-d debug]
 
 Options:
     -e epsg                   Desired EPSG code you want (for example, 32611)

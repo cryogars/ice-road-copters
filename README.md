@@ -42,14 +42,14 @@ Users must supply a shape file clipped to the roadway through the domain. During
 
 ```
 
-NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `geoid_tool.py` to correct this.
+NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `transform_data.py` to correct this.
 
-## Transforming vertical datum
+## Transforming horizontal and vertical references
 
 As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
 
 ```
-$ python scripts/geoid_tool.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin> -d debug
+$ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin> -d debug
 ```
 
 ### Flags

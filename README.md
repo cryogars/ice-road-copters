@@ -80,6 +80,7 @@ After running pdal processing and ASP post-processing, we are able to generate a
 See `ice-road-pipeline.py` for the additional optional flags. This currently requires a target with a known reflectance in order to calibrate lidar reflectance. It assumes wavelength = 1064 nm.
 
 This is very experimental but you can read more about this work here: 
+
 Wilder et al. (2025). Modeling snow optical properties from single wavelength airborne lidar in steep forested terrain. Frontiers in Earth Science, 13, 1487776.
 
 ```

@@ -10,6 +10,10 @@ Note: that you may need to consider variable parameters for Helmert transform if
 
 ---------------------------------------------------------------------------------------------------------------
 
+For obtaining a geoid grid raster for transformation. If you have installed Ames Stereo Pipeline they provide some. See /ASP/share/geoids. Current options include egm96, egm2008, and navd88. 
+
+---------------------------------------------------------------------------------------------------------------
+
 PDAL can be ran by calling the JSON config file by:
 
 `pdal pipeline -i path/to/your/config.json -v 8`

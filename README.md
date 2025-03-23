@@ -1,6 +1,6 @@
 # ice-road-copters :helicopter:
 
-<img src="https://github.com/SnowEx/ice-road-copters/blob/main/docs/ice-road-copter-title-img.jpg" width="1600">
+<img src="docs/ice-road-copter-title-img.jpg" width="1600">
 
 [![DOI](https://zenodo.org/badge/505257224.svg)](https://zenodo.org/badge/latestdoi/505257224)
 

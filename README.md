@@ -42,25 +42,8 @@ Users must supply a shape file clipped to the roadway through the domain. During
 
 ```
 
-NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can use the `transform_data.py` to correct this.
+NOTE: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same horizontal and vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can see `contrib/datum_transformation_examples` of examples to correct this.
 
-## Transforming horizontal and vertical references
-
-As stated above, if your vertical datum differs between your point cloud and reference DEM use the following to correct your reference,
-
-```
-$ python scripts/transform_data.py <path-to-reference-data> -e epsg -t transform_command -a <dir-to-ASP-bin>
-```
-
-### Flags
-
-```
--e epsg                   Desired EPSG code you want (for example, 32611)
--t transform_command      Options: to_geoid , to_ellipsoid
--a asp_dir                Directory with ASP binary files
--d debug                  turns on debugging logging
--u                        Danger Zone: call flag to user override datum (used for USGS 3DEP lidar data)
-```
 
 ## Additional information :books:
 

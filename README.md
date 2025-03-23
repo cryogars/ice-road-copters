@@ -42,7 +42,7 @@ Users must supply a shape file clipped to the roadway through the domain. During
 
 ```
 
-!WARNING: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same horizontal and vertical datum (ellipsoid vs. geoid). If your vertical datum differs between the two you can see [contrib/datum_transformation_examples](contrib/datum_transformation_examples) of examples to correct this.
+!WARNING: this code assumes you are using a reference DEM (and other airborne lidar data) referenced to the same horizontal and vertical datum (e.g., both in WGS ellipsoid, or both in NAVD88 geoid, etc.). If your vertical datum differs between the two you can see [contrib/datum_transformation_examples](contrib/datum_transformation_examples) of examples to correct this.
 
 
 ## Additional information :books:

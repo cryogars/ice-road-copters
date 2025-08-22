@@ -58,7 +58,10 @@ def cl_call(command, log):
                 log.info(output.strip())
             break
 
-def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned', json_dir = './jsons', canopy = False):
+def create_json_pipeline(
+in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
+        json_dir = './jsons', canopy = False, **kwargs
+):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
     Filters include: dem, elm, outlier
@@ -109,9 +112,12 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
                 "multiplier": 2.2
     }
     # SMRF classifier for ground
-    smrf_classifier = {"type": "filters.smrf",\
+
+    smrf_classifier = {"type": "filters.smrf",
         "ignore": "Classification[7:7], NumberOfReturns[0:0], ReturnNumber[0:0]"
     }
+
+    smrf_classifier.update(kwargs)
     # Select ground points only
     smrf_selecter = { 
             "type":"filters.range",
@@ -214,7 +220,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
+def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format, **kwargs):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -284,7 +290,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
 
     # DTM creation
     log.info("Creating DTM Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp, json_dir = json_dir)
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp, json_dir = json_dir, kwargs)
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running DTM pipeline")

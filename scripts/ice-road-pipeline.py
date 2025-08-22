@@ -20,11 +20,17 @@ Options:
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
     -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
     -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
-    -o aod           (Optional) Aerosol optical depth at 550 nm (float) 
+    -o aod           (Optional) Aerosol optical depth at 550 nm (float)
+    -scalar          (Optional) Scalar parameter for SMRF
+    -slope           (Optional) slope parameter for SMRF
+    -threshold       (Optional) threshold parameter for SMRF
+    -window          (Optional) window parameter for SMRF
 
 """
 
 from cmath import exp
+
+from PyQt5.QtQml import kwargs
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
@@ -47,6 +53,7 @@ if __name__ == '__main__':
     # get command line args
     args = docopt(__doc__)
     user_dem = args.get('-e')
+    smrf_classifier_args={}
     if user_dem:
         user_dem = abspath(user_dem)
     geoid = args.get('-g')
@@ -103,6 +110,26 @@ if __name__ == '__main__':
     if aod:
         aod = float(aod)
 
+    scalar = args.get('-scalar')
+    if scalar:
+        scalar = float(scalar)
+        smrf_classifier_args['scalar'] = scalar
+
+    slope = args.get('-slope')
+    if slope:
+        slope = float(slope)
+        smrf_classifier_args['slope'] = slope
+
+    threshold = args.get('-threshold')
+    if threshold:
+        threshold = float(threshold)
+        smrf_classifier_args['threshold'] = threshold
+
+    window = args.get('-window')
+    if window:
+        window = float(window)
+        smrf_classifier_args['window'] = window
+
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -149,10 +176,11 @@ if __name__ == '__main__':
     # run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, 
+
+    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, smrf_classifier_args,
                                                     user_dem = user_dem, 
                                                     las_extra_byte_format = las_extra_byte_format)
-    
+
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 

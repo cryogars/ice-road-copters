@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\RDCRLSMC\\ice-road-copters\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\RDCRLSMC\\ice-road-copters\\scripts\\ice-road-pipeline.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:scripts\\ice-road-pipeline.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ice-road-pipeline.py",
+              "DocumentMoniker": "C:\\Users\\RDCRLSMC\\ice-road-copters\\scripts\\ice-road-pipeline.py",
+              "RelativeDocumentMoniker": "scripts\\ice-road-pipeline.py",
+              "ToolTip": "C:\\Users\\RDCRLSMC\\ice-road-copters\\scripts\\ice-road-pipeline.py",
+              "RelativeToolTip": "scripts\\ice-road-pipeline.py",
+              "ViewState": "AgIAAIoAAAAAAAAAAAAAAIoAAAAlAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAhISURBVFhHzVhrbBTXGT37Xq\u002BN1zaOn\u002BsHGIeAbVoFK05tQKi0YAXH1CQkKqnSorZyflRtRaXWP/pQ\u002BdGKyn38atWmQkpMfzSRCFKoQgSlUBAVwYmbpFBI2mBjHPz2enexvbuzMz3f3VliYD3eDW2VDx3fO3dm7j1zvse9Cz7RZhiG2fvkms1s01pRUVFTaWlpm3l5vzZPnB8aGnp/bm4uOZKBWRJsbGz8Vltb24\u002BLi4tDTqdTN4eztpGRkYDD4QgnEonXh4eHe06ePDnIvnnX2pYl2NnZ\u002Bc29e/cW5ufne8zhrO3gwYNezhUiufnx8fFz09PT\u002B44cOXLLvG1pdrNd0kS5wsJCz8qVK3M\u002BLux2u23t2rX\u002B9vb2BD90O0Pn5T179nhtNkt9lC1L8L9pGzdurOzo6AiRZJvf7\u002B/bsWNHlc/nM\u002B\u002Bmt4wJSsYHg0GMjo5aYmxsDFZJ0NLSEti1a1eYXmkNBAI/aW1tXW1FMisF5\u002BfnFUkrzM7OIhaLmW\u002Bkt\u002Bbm5oquri4Xk29TbW3t97ds2VK\u002BlLuzIlhSUoK6ujpLrFq1CnSh\u002BcbSxqQp2rlzZy6f/TyV7CbBtAyXzeLdu3d/o7u7u4IxkyNjmRR3WWvxevv37zd795qu6zLnIVo3\u002B/fUnqwIskQgEomYd9ObEKPr7lDx7NmzZu9OE3IDAwO4du3akgSzcjGLrZQdS7hcrjvUE9u8eXNabNq0CRUVFeZT6S1jgrIoaxqqq6stwXhCXl6eeof1T0E\u002BbDFk7O6PWMqyUlAmzQSiosfjQcywYXBqAReuTeP0lQmcuTKOt9gfCS7A4XLD7XYrslbmNNtlTZKDsYLJyUlzJL2VlZUhv7QaL134AOeujuHWQhSJhA5doGtEgn0DZX4vvr69AU0bPoXLly\u002Bbb99rWSkowV9TU2OJ8kAVXnv7JpWaQsuaYlQU5MAgOYPEDMlYkpP\u002Bh1Mh/PpPf0fYWSQ7zEpRPp1lFYOSmTx\u002BWcLucGFoMoyGgB9f27oG2xoqoBskZwhJkpOW0NkfnY7gyo0p1NU/WMn50zLMmKC4OBwOKxdbQSymJXBpeAovnHkPp/5xQxFLiGtNJBUVd2tYiMYZix45ONwfQbGJiQkVh1YQk/o2OjOH1waG8cHYrCJEhsq1KRV1frAq0vwnpx31YhrLOEnkA7lvqjhbbDa7AxqzdV4zENd0TEVieKZtNZ5q4XPcdISAqP\u002BvmzP4w5l/Ynp2juRSSSOKGqit9jdEb12PcjYd9txB2Ly/e2zn478/fvz4tGUxWryTFBQw2u8yO2vawPUQjrw5jKsjPCTE40qVlBvFrQZPzsnMFVJsFbnktcHY/NK2Jjz36N\u002BQY7vBGUnHUQLktWvwrPvFF7qe7MkqBnkSBk/FCtFoFOMRDYf\u002B\u002Bm9cuj5DchJTdJu5uBzpJWuTKklLSIIIaYEkDsdE5dtmaEB8GIicciIReu7o0aMPZhWDcoySI5dAtrVz701gZHpOxZQqIWphupQt/yiyKuZImBfqGamB8iHqeT7rtNOrwlLeScTZEtGrgDYmm/nTWRFMHbfq6\u002Bshh8y3BqdJxFTIVERlqJkA7CTJ8F7CHEsql4zLHI8TgYIo3HYecA05QxI6QzHBnyvRQVlye1YElTqEJIxgcCyMBBNDKWW6Ve0WbG1U0O0Actw2eN0u5LrsyHXb4XM74fPYUZjnxY6HA9hSNwabNkZSJJegi0VB6ceuy5LNGSeJHLfkOB8KhcA\u002Bqqqq0NF7SpGROJPtLBlfOlZ4nXi4Ng/rK20kJUtIOlNBkuYfdV1WYMeG8kl44xdJKMhxCQsSVCBJ3yPcN7\u002BXXR2UzT03N1cdBMQ8DptymyQFO6rvYkl76tFi7P9cEE9veBcda/uTeOhNdK4bQOd6Yl0/Hnngz/BG/8JYm0mqpot7TUgsmsmTMUFxKX/oqPObtHIKqSjwJmOKyqiSQoJ1ZT50ffoW/KAycbpJG5WAZ59t7MPkmLhPmzAJCbkUzGtR0MlyA4SzUjAVeylrqCxk7H2UEEKwKZCPPPsQ73KRO0ziSxLAJCMkUopJgghkXN1n39sgL53OmKAkh2xl/f39uHjxIqamprC1sRwOziBxmGCAS\u002BtxypQkk3xJbnJREtOEhElOJYRJRMY0c0wRZ\u002BteQwT41XgxKwXluCXbnUCsrjQfjzfXoDDXrX7cqHqYCh5JCLr/tjIpcilSomaKrFJQnuGHOYqAwscAV/Hbhw8fPpZxFqfb6hws1pEFDe8MTmIiNK\u002ByeX0gF03\u002BY6xjV0hA3CpZSdhZd3MaGSecRhGXDyDsTDibl7PJh5GOq5wZ3HQVjhXfZZy/mpWCd1tC0\u002BBz2dD2UBm6Wlbjic/Uo6mmmGullFoEjaVk7l0gwuSJ9BNvMAUukJObinUcQ9GTL6HoiRexovUHvb/87Vf4g\u002Bp1WeO\u002BCIpJbGokGudBQaBM4k65T4iKitKGk7vDwvscD/FFqiUqx5nNMMZ5GH7W6/V\u002BlfhpT0/PhfPnz/OrMiDIxW3BYHCOB4VIJuDWlgxCVcu4RipzVWLINd1a9TOg8od0pxzduN3QtdznEyZYFCQ/krZsDFLqH3EPnuDPxY/esrB9X36mLpD/jhMzr5AM91SJv1QcqpbqPrAvGXfBYzCKn4Wt4LOHvF5ftxA0p7ltlgQ/zn8BnzhxoqiixPVtzJ4oRuQ03ThCYqKmSVISQ1TzMWHyt8Hwb7v58189/x269Y9UziwB/0Nrb2/3MJu/qGuRy/rCoK4Hz\u002Bj66PO6fqNX10eI8T5dD72h6wvDMV2bP9nb27ud26ek8f/XDhw4kM8E2ku8TIwQMWKOuET8htja19e3TA4A/wGe0Fzq3C34vAAAAABJRU5ErkJggg==",
+              "WhenOpened": "2024-09-23T23:34:05.174Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

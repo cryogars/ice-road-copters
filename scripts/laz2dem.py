@@ -1,12 +1,3 @@
-"""
-Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
-
-Usage:
-    laz2dem.py <in_dir> [-d debug]
-
-Options:
-    -d debug      turns on debugging logging  [default: True]
-"""
 import json
 import logging
 import os
@@ -58,7 +49,7 @@ def cl_call(command, log):
                 log.info(output.strip())
             break
 
-def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned', json_dir = './jsons', canopy = False):
+def create_json_pipeline(in_fp, outlas, outtif, user_shp, dem_fp, json_name = 'las2unaligned', json_dir = './jsons', canopy = False):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
     Filters include: dem, elm, outlier
@@ -135,10 +126,25 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
     }
 
     # set up pipeline
-    if canopy:
-        pipeline = [reader, dem_filter, first_returns, las_writer]
-    else:
-        pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
+    if user_shp is None and canopy:
+        pipeline = [
+            reader, first_returns, las_writer
+        ]
+    elif user_shp is None and not canopy:
+        pipeline = [
+            reader, mongo_filter, elm_filter, outlier_filter,
+            smrf_classifier, smrf_selecter, las_writer, tif_writer
+        ]
+    elif user_shp is not None and canopy:
+        pipeline = [
+            reader, dem_filter, first_returns, las_writer
+        ]
+    else:  # user_shp and not canopy
+        pipeline = [
+            reader, mongo_filter, dem_filter, elm_filter, outlier_filter,
+            smrf_classifier, smrf_selecter, las_writer, tif_writer
+        ]
+
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
     os.makedirs(json_dir, exist_ok= True)
@@ -176,7 +182,8 @@ def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.la
     log.debug(f"Using mosaic command: {mosaic_cmd}")
     # run mosaic command
     cl_call(mosaic_cmd, log)
-    
+    print("####### Finished mosaic!")
+    print('Mosiac result:', mosaic_fp)
     return mosaic_fp
 
 def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sqlite'):
@@ -214,7 +221,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
+def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_format):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -265,26 +272,30 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
     mosaic_fp = join(results_dir, 'unfiltered_merge.laz')
     mosaic_fp = mosaic_laz(in_dir,las_extra_byte_format, out_fp=mosaic_fp, log = log)
 
+    return mosaic_fp
+
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
         return -1
     # Allowing the code to use user input DEM
-    dem_fp = join(results_dir, 'dem.tif')
-
-    if not user_dem:
-        log.info("Starting DEM download...")
-        _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp, cache_fp= join(results_dir, 'py3dep_cache', 'aiohttp_cache.sqlite'))
-        log.debug(f"Downloaded dem to {dem_fp}")
+    if user_shp:
+        dem_fp = join(results_dir, 'dem.tif')
+        if not user_dem:
+            log.info("Starting DEM download...")
+            _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp, cache_fp= join(results_dir, 'py3dep_cache', 'aiohttp_cache.sqlite'))
+            log.debug(f"Downloaded dem to {dem_fp}")
+        else:
+            log.info("User DEM specified. Skipping DEM download...")
+            cl_call('cp '+ user_dem +' '+ dem_fp, log) #to ensure const. filenames for next step
+        if not exists(join(results_dir, 'dem.tif')):
+            log.warning('No DEM downloaded')
+            return -1
     else:
-        log.info("User DEM specified. Skipping DEM download...")
-        cl_call('cp '+ user_dem +' '+ dem_fp, log) #to ensure const. filenames for next step
-    if not exists(join(results_dir, 'dem.tif')):
-        log.warning('No DEM downloaded')
-        return -1
+        log.info("continue without DEM download")
 
     # DTM creation
     log.info("Creating DTM Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp, json_dir = json_dir)
+    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, user_shp = user_shp, dem_fp = dem_fp, json_dir = json_dir)
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running DTM pipeline")
@@ -297,7 +308,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
     # DSM creation
     log.info("Creating Canopy Pipeline...")
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = canopy_laz, \
-        outtif = canopy_laz.replace('laz','tif'), dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
+        outtif = canopy_laz.replace('laz','tif'), user_shp=user_shp, dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
         json_name='canopy')
     log.debug(f"JSON to use is {json_to_use}")
 

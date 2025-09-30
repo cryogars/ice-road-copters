@@ -2,25 +2,26 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]  
+    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]
 
 Options:
     -e user_dem      Path to user specifed DEM
     -d debug         turns on debugging logging
     -a asp_dir       Directory with ASP binary files
-    -s shp_fp        Shapefile to align with
+    -s shp-_fp        Shapefile to align with. If omitted, processing will terminate before coregistration.
     -b buffer_meters Total width for the transform area
     -g geoid         Is the reference DEM in geoid
     -r shp_fp_rfl    (Optional) Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
                      Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
                      "Intensity as Reflectance" returned by RIEGL.
     -i imu_data      (Optional) Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
-                     Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
+                     Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]']
     -c cal_las       (Optional) Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
     -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
-    -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
-    -o aod           (Optional) Aerosol optical depth at 550 nm (float) 
+    -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float)
+    -o aod           (Optional) Aerosol optical depth at 550 nm (float)
+
 
 """
 
@@ -28,7 +29,6 @@ from cmath import exp
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
-from laz_align import laz_align
 import rioxarray as rio
 from rasterio.crs import CRS
 from datetime import datetime
@@ -60,16 +60,17 @@ if __name__ == '__main__':
             asp_dir = join(asp_dir, 'bin')
     else:
         asp_dir = abspath(join('ASP', 'bin'))
+
     shp_fp = args.get('-s')
     if shp_fp:
         shp_fp = abspath(shp_fp)
         if isdir(shp_fp):
-            raise Exception("Provide to .shp file to use. Not directory.")
-        elif not shp_fp.endswith('.shp'):
-            raise Exception("Provide fp to .shp file to use.")
+            raise ValueError("Provide a .shp file, not a directory.")
+        if not shp_fp.lower().endswith('.shp'):
+            raise ValueError("Provide filepath to a .shp file.")
     else:
-        raise Exception("Provide filepath to .shp file for alignment with -s flag.")
-    
+        shp_fp = None
+
     buffer_meters = args.get('-b')
     if buffer_meters:
         known_rfl = float(buffer_meters)
@@ -107,8 +108,8 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    
-    
+
+
     # setup our directory structure
     ice_dir = join(in_dir, 'ice-road')
     os.makedirs(ice_dir, exist_ok= True)
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     )
     log = logging.getLogger(__name__)
     if debug:
-        log.setLevel(logging.DEBUG)  
+        log.setLevel(logging.DEBUG)
 
     # check for white spaces
     if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
@@ -146,22 +147,38 @@ if __name__ == '__main__':
         replace_white_spaces(in_dir)
         # raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
 
-    # run main functions
+    # Run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, 
-                                                    user_dem = user_dem, 
-                                                    las_extra_byte_format = las_extra_byte_format)
-    
-    log.info('Starting ASP laz align')
-    log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
+    res = las2uncorrectedDEM(
+            in_dir, debug, log, user_shp=shp_fp,
+            user_dem=user_dem,
+            las_extra_byte_format=las_extra_byte_format
+        )
+    print(">>>>>>>>> printing:", res)
+    # outtif, outlas, canopy_laz = las2uncorrectedDEM(
+    #         in_dir, debug, log, user_shp=shp_fp,
+    #         user_dem=user_dem,
+    #         las_extra_byte_format=las_extra_byte_format
+    #     )
 
-    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, 
-                                     asp_dir = asp_dir,log = log, input_laz = outlas, 
-                                     canopy_laz = canopy_laz, dem_is_geoid= geoid, 
+    # If no shapefile was provided, stop here
+    if shp_fp is None:
+            end_time = datetime.now()
+            log.info("No shapefile (-s) provided. Skipping coregistration.")
+            log.info(f"Completed! Run Time: {end_time - start_time}")
+            sys.exit(0)
+    #otherwise, continue to coregistration
+    else:
+            log.info('Starting ASP laz align')
+            log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
+
+    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp,
+                                     asp_dir = asp_dir,log = log, input_laz = outlas,
+                                     canopy_laz = canopy_laz, dem_is_geoid= geoid,
                                      buffer_meters=buffer_meters,
                                      las_extra_byte_format=las_extra_byte_format)
-    
+
     # clean up after ASP a bit
     for fp in os.listdir(ice_dir):
         if fp.endswith(".txt"):
@@ -170,12 +187,12 @@ if __name__ == '__main__':
             os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
     snow_tif = snow_tif.replace('-DEM','')
     canopy_tif = canopy_tif.replace('-DEM','')
-    
+
     # difference two rasters to find snow depth
     ref_dem_path = join(results_dir, 'dem.tif')
     snow_depth_path = join(ice_dir, f'{basename(in_dir)}-snowdepth.tif')
     snowoff = rio.open_rasterio(ref_dem_path, masked=True)
-    snowon = rio.open_rasterio(snow_tif, masked=True) 
+    snowon = rio.open_rasterio(snow_tif, masked=True)
     snowon_matched = snowon.rio.reproject_match(snowoff)
     snowdepth = snowon_matched - snowoff
 
@@ -186,7 +203,7 @@ if __name__ == '__main__':
     # difference two rasters to find canopy height
     ref_dem_path = join(results_dir, 'dem.tif')
     canopy_fp = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
-    canopy = rio.open_rasterio(canopy_tif, masked=True) 
+    canopy = rio.open_rasterio(canopy_tif, masked=True)
     matched = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
 
@@ -198,7 +215,7 @@ if __name__ == '__main__':
     if shp_fp_rfl:
         grain_pipeline(cal_las, shp_fp_rfl,
                        imu_data, known_rfl,
-                       results_dir, ice_dir, 
+                       results_dir, ice_dir,
                        in_dir, snow_tif,
                        snow_depth_path,
                        canopy_fp, h2o, aod)

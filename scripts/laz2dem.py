@@ -175,16 +175,21 @@ def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.la
         in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.las')))
     else:
         in_str = ' '.join(glob(join(in_dir, f'{laz_prefix}*.laz')))
+    print("in_str = ", in_str)
     # out fp to save to
     mosaic_fp = join(in_dir, out_fp)
+
+    print("in_dir = ", in_dir)
+    print("mosaic_fp = ", mosaic_fp)
+
     # set up mosaic command
     mosaic_cmd = f'pdal merge {in_str} {mosaic_fp}'
     log.debug(f"Using mosaic command: {mosaic_cmd}")
     # run mosaic command
     cl_call(mosaic_cmd, log)
-    print("####### Finished mosaic!")
-    print('Mosiac result:', mosaic_fp)
+
     return mosaic_fp
+
 
 def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sqlite'):
     """
@@ -268,15 +273,14 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
         las_fps = glob(join(in_dir, '*.las'))
     else:
         las_fps = glob(join(in_dir, '*.laz'))
-    log.debug(f"Number of las files: {len(las_fps)}")
+    log.info(f"Number of las files: {len(las_fps)}")
     mosaic_fp = join(results_dir, 'unfiltered_merge.laz')
     mosaic_fp = mosaic_laz(in_dir,las_extra_byte_format, out_fp=mosaic_fp, log = log)
-
-    return mosaic_fp
 
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
         return -1
+
     # Allowing the code to use user input DEM
     if user_shp:
         dem_fp = join(results_dir, 'dem.tif')

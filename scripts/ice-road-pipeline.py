@@ -150,17 +150,11 @@ if __name__ == '__main__':
     # Run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-    res = las2uncorrectedDEM(
+    outtif, outlas, canopy_laz = las2uncorrectedDEM(
             in_dir, debug, log, user_shp=shp_fp,
             user_dem=user_dem,
             las_extra_byte_format=las_extra_byte_format
         )
-    print(">>>>>>>>> printing:", res)
-    # outtif, outlas, canopy_laz = las2uncorrectedDEM(
-    #         in_dir, debug, log, user_shp=shp_fp,
-    #         user_dem=user_dem,
-    #         las_extra_byte_format=las_extra_byte_format
-    #     )
 
     # If no shapefile was provided, stop here
     if shp_fp is None:

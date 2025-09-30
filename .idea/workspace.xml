@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0dd8fcbe-42a1-4897-ab37-7e44982a55bc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/scripts/ice-road-pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/ice-road-pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/laz2dem.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/laz2dem.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="issue-24-PDAL/DEM" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;naniciafone&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/cryogars/ice-road-copters.git&quot;,
+    &quot;accountId&quot;: &quot;ddd870b1-fec8-4254-9b57-ccd1fc57f384&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="2mfJaeEQDiTpuN2qQUGUjgtVBqk" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.ice-road-pipeline.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "issue-24-PDAL/DEM",
+    "last_opened_file_path": "C:/Users/RDCRLSMC/PycharmProjects/crrel",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\RDCRLSMC\ice-road-copters\notebooks\testing" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\RDCRLSMC\ice-road-copters\notebooks" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-PY-242.23339.19" />
+        <option value="bundled-python-sdk-0029f7779945-399fe30bd8c1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.23339.19" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0dd8fcbe-42a1-4897-ab37-7e44982a55bc" name="Changes" comment="" />
+      <created>1727461761645</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1727461761645</updated>
+      <workItem from="1727461762724" duration="3652000" />
+      <workItem from="1727467031683" duration="1751000" />
+      <workItem from="1727795580991" duration="2816000" />
+      <workItem from="1727820691667" duration="2741000" />
+      <workItem from="1728430458915" duration="2903000" />
+      <workItem from="1728486435806" duration="3816000" />
+      <workItem from="1732044385061" duration="711000" />
+      <workItem from="1732053541878" duration="4222000" />
+      <workItem from="1733243234696" duration="25000" />
+      <workItem from="1753211256719" duration="6806000" />
+      <workItem from="1753379182649" duration="3341000" />
+      <workItem from="1753717852934" duration="5825000" />
+      <workItem from="1753737132005" duration="2997000" />
+      <workItem from="1753814157027" duration="635000" />
+      <workItem from="1753913600148" duration="2615000" />
+      <workItem from="1754000553787" duration="2277000" />
+      <workItem from="1755542420840" duration="18900000" />
+      <workItem from="1756239858605" duration="5495000" />
+      <workItem from="1756413309332" duration="2566000" />
+      <workItem from="1758905580529" duration="9797000" />
+      <workItem from="1758916697734" duration="25486000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
+          <url>notebook://C:/Users/RDCRLSMC/ice-road-copters/notebooks/testing/pipeline_copy.ipynb</url>
+          <line>53</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/ice_road_copters$ice_road_pipeline.coverage" NAME="ice-road-pipeline Coverage Results" MODIFIED="1755719186426" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+  </component>
+</project>

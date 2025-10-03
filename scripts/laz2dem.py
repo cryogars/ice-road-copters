@@ -182,8 +182,8 @@ def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.la
     print("in_dir = ", in_dir)
     print("mosaic_fp = ", mosaic_fp)
 
-    # set up mosaic command
     mosaic_cmd = f'pdal merge {in_str} {mosaic_fp}'
+    mosaic_cmd = mosaic_cmd.replace("\\", "/")
     log.debug(f"Using mosaic command: {mosaic_cmd}")
     # run mosaic command
     cl_call(mosaic_cmd, log)
@@ -267,6 +267,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
                 return outtif, outlas, canopy_laz
             elif ans.lower() == 'y':
                 break
+
     # mosaic
     log.info("Starting to mosaic las files...")
     if las_extra_byte_format is True:
@@ -275,7 +276,8 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
         las_fps = glob(join(in_dir, '*.laz'))
     log.info(f"Number of las files: {len(las_fps)}")
     mosaic_fp = join(results_dir, 'unfiltered_merge.laz')
-    mosaic_fp = mosaic_laz(in_dir,las_extra_byte_format, out_fp=mosaic_fp, log = log)
+    if not exists(mosaic_fp):
+        mosaic_fp = mosaic_laz(in_dir,las_extra_byte_format, out_fp=mosaic_fp, log = log)
 
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
@@ -295,6 +297,7 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
             log.warning('No DEM downloaded')
             return -1
     else:
+        dem_fp = False
         log.info("continue without DEM download")
 
     # DTM creation
@@ -303,6 +306,9 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running DTM pipeline")
+    json_to_use = json_to_use.replace("\\", "/")
+    print("json to use string:", json_to_use)
+
     if debug:
         pipeline_cmd = f'pdal pipeline -i {json_to_use} -v 8'
     else:
@@ -311,10 +317,13 @@ def las2uncorrectedDEM(in_dir, debug, log, user_shp, user_dem, las_extra_byte_fo
 
     # DSM creation
     log.info("Creating Canopy Pipeline...")
+
     json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = canopy_laz, \
         outtif = canopy_laz.replace('laz','tif'), user_shp=user_shp, dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
         json_name='canopy')
     log.debug(f"JSON to use is {json_to_use}")
+    json_to_use = json_to_use.replace("\\", "/")
+    print("json to use string:", json_to_use)
 
     log.info("Running Canopy pipeline")
     if debug:

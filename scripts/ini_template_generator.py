@@ -19,12 +19,6 @@ Options:
     -h, --help
         Show this help message and exit.
 
-Notes:
-    • Parent folders are created automatically if they do not exist.
-    • If you pass only a filename (no directory), the file is written to the
-      current working directory.
-    • After resolving, the final absolute path is printed before writing.
-
 Examples:
     python ini_template_generator.py my_config.ini
     python ini_template_generator.py configs/ice_road_run01.ini --force

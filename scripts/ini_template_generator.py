@@ -38,11 +38,12 @@ TEMPLATE = """# ==============================================================
 # Notes:
 #  - All paths can be absolute or relative to this config file.
 #  - Leave optional fields blank if not applicable.
+#  - Fields marked <required: ...> must be provided before running.
 # ==============================================================
 
 [general]
 # Required: directory containing .laz or .las LiDAR files
-input_dir = ./input_data
+input_dir = <required: path to input LiDAR directory>
 # Optional: enable verbose logging (true/false)
 debug = false
 
@@ -53,29 +54,70 @@ user_dem =
 is_geoid = 
 
 [alignment]
-# Shapefile (.shp) to align point clouds with (e.g. ice road centerline)
-shapefile = ./shapefiles/road_centerline.shp
-# Buffer width in meters (total width, not radius)
+# Required: Shapefile (.shp) to align point clouds with (e.g. ice road centerline)
+shapefile = <required: path to alignment shapefile>
+# Optional: buffer width in meters (total width, not radius)
 buffer_meters = 3.0
-# Path to Ames Stereo Pipeline (ASP) binaries
-asp_dir = /usr/local/ASP/bin
+# Required: path to Ames Stereo Pipeline (ASP) binaries
+asp_dir = <required: path to ASP /bin directory>
 
 [reflectance]
 # Optional inputs for reflectance or snow grain size analysis
-shp_fp_rfl =
-imu_data =
-cal_las =
-known_rfl =
-h2o =
-aod =
+shp_fp_rfl = 
+imu_data = 
+cal_las = 
+known_rfl = 
+h2o = 
+aod = 
 
 [smrf]
 # Optional SMRF (Simple Morphological Filter) overrides
-scalar =
-slope =
-threshold =
-window =
+scalar = 
+slope = 
+threshold = 
+window = 
 """
 
+
+def write_template_config(filename: Path, force: bool = False) ->None:
+
+    """
+    Write the INI template to the target filename.
+
+    - Prompts before overwrite unless `force=True`.
+    """
+
+    filename = filename.resolve() if filename.is_absolute() else filename.expanduser().resolve()
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Preparing to create INI template at:\n   {filename}")
+
+    if filename.exists() and not force:
+        print(f"Config file already exists at:\n   {filename}")
+        ans = input("Overwrite? (y/N): ").strip().lower()
+        if ans != "y":
+            print("Aborted — file not overwritten.")
+            sys.exit(0)
+
+    filename.write_text(data=TEMPLATE.format(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")), encoding="utf-8")
+    print(f"INI configuration template created at:\n   {filename}")
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2 or argv in ["-h", "--help"]:
+        print(__doc__)
+        return 0 if len(argv) >= 2 else 1
+
+    # Parse args (very lightweight)
+    force = "--force" in argv
+    # First non-flag argument is the output path. Safe because we expect a single non-flag arg
+    out_arg = next((a for a in argv[1:] if not a.startswith("-")), None)
+
+    if out_arg is None:
+        print("Missing output filename.\n")
+        print(__doc__)
+        return 1
+
+    write_template_config(Path(out_arg), force=force)
+    return 0
+
 if __name__ == "__main__":
-    print(TEMPLATE)
+    sys.exit(main(sys.argv))

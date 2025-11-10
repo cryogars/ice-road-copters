@@ -28,8 +28,19 @@ Examples:
 from __future__ import annotations
 
 import sys
+import logging
 from datetime import datetime
 from pathlib import Path
+
+
+# ----------------------------------------------------------------------
+# Logging setup
+# ----------------------------------------------------------------------
+log = logging.getLogger("ini_template_generator")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s",
+)
 
 TEMPLATE = """# ==============================================================
 # Ice Road .INI file Configuration Template
@@ -87,21 +98,21 @@ def write_template_config(filename: Path, force: bool = False) -> None:
     - Prompts before overwrite unless `force=True`.
     """
 
+    log.info(f"Preparing to create INI template at: {filename}")
     filename.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Preparing to create INI template at:\n   {filename}")
 
     if filename.exists() and not force:
-        print(f"Config file already exists at:\n   {filename}")
+        log.warning(f"Config file already exists at:\n   {filename}")
         ans = input("Overwrite? [y/N]: ").strip().lower()
         if ans != "y":
-            print("Aborted — file not overwritten.")
+            log.info("Aborted — file not overwritten.")
             sys.exit(0)
 
     filename.write_text(
         TEMPLATE.format(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         encoding="utf-8"
     )
-    print(f"✓ INI configuration template created at:\n   {filename}")
+    log.info(f"✓ INI configuration template created at:\n   {filename}")
     print("\nNext steps:")
     print(f"  Edit '{filename.name}' and replace all '<required: ...>' fields and placeholders")
 
@@ -116,13 +127,13 @@ def main(argv: list[str]) -> int:
     non_flag_args = [a for a in argv[1:] if not a.startswith("-")]
 
     if len(non_flag_args) == 0:
-        print("Error: Missing output filename.\n")
+        log.error("Error: Missing output filename.\n")
         print(__doc__)
         return 1
     
     if len(non_flag_args) > 1:
-        print(f"Error: Too many arguments: {non_flag_args}")
-        print("Expected exactly one output filename.\n")
+        log.error(f"Error: Too many arguments: {non_flag_args}")
+        log.error("Expected exactly one output filename.\n")
         print(__doc__)
         return 1
 

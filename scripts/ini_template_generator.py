@@ -34,12 +34,12 @@ from pathlib import Path
 TEMPLATE = """# ==============================================================
 # Ice Road .INI file Configuration Template
 # Generated on {date}
-# ==============================================================
+# ==============================================================================
 # Notes:
 #  - All paths can be absolute or relative to this config file.
 #  - Leave optional fields blank if not applicable.
-#  - Fields marked <required: ...> must be provided before running.
-# ==============================================================
+#  - Fields marked <required: ...> must be provided before running the pipeline.
+# ==============================================================================
 
 [general]
 # Required: directory containing .laz or .las LiDAR files
@@ -79,7 +79,7 @@ window =
 """
 
 
-def write_template_config(filename: Path, force: bool = False) ->None:
+def write_template_config(filename: Path, force: bool = False) -> None:
 
     """
     Write the INI template to the target filename.
@@ -87,36 +87,47 @@ def write_template_config(filename: Path, force: bool = False) ->None:
     - Prompts before overwrite unless `force=True`.
     """
 
-    filename = filename.resolve() if filename.is_absolute() else filename.expanduser().resolve()
     filename.parent.mkdir(parents=True, exist_ok=True)
     print(f"Preparing to create INI template at:\n   {filename}")
 
     if filename.exists() and not force:
         print(f"Config file already exists at:\n   {filename}")
-        ans = input("Overwrite? (y/N): ").strip().lower()
+        ans = input("Overwrite? [y/N]: ").strip().lower()
         if ans != "y":
             print("Aborted — file not overwritten.")
             sys.exit(0)
 
-    filename.write_text(data=TEMPLATE.format(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")), encoding="utf-8")
-    print(f"INI configuration template created at:\n   {filename}")
+    filename.write_text(
+        TEMPLATE.format(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        encoding="utf-8"
+    )
+    print(f"✓ INI configuration template created at:\n   {filename}")
+    print("\nNext steps:")
+    print(f"  Edit '{filename.name}' and replace all '<required: ...>' fields and placeholders")
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 2 or argv in ["-h", "--help"]:
+    if len(argv) < 2 or "-h" in argv or "--help" in argv:
         print(__doc__)
         return 0 if len(argv) >= 2 else 1
 
     # Parse args (very lightweight)
     force = "--force" in argv
     # First non-flag argument is the output path. Safe because we expect a single non-flag arg
-    out_arg = next((a for a in argv[1:] if not a.startswith("-")), None)
+    non_flag_args = [a for a in argv[1:] if not a.startswith("-")]
 
-    if out_arg is None:
-        print("Missing output filename.\n")
+    if len(non_flag_args) == 0:
+        print("Error: Missing output filename.\n")
+        print(__doc__)
+        return 1
+    
+    if len(non_flag_args) > 1:
+        print(f"Error: Too many arguments: {non_flag_args}")
+        print("Expected exactly one output filename.\n")
         print(__doc__)
         return 1
 
-    write_template_config(Path(out_arg), force=force)
+    out_path = Path(non_flag_args[0]).expanduser().resolve()
+    write_template_config(out_path, force=force)
     return 0
 
 if __name__ == "__main__":

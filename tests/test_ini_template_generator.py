@@ -50,7 +50,6 @@ def run_script(*args, cwd=None, input_data=None, timeout=10):
 # Main CLI Tests
 # ---------------------------------------------------------------------
 
-@pytest.mark.filterwarnings("ignore:.*include_z.*:DeprecationWarning")
 class TestIniTemplateGenerator:
     """Tests for ini_template_generator.py main CLI behavior."""
 
@@ -117,7 +116,6 @@ class TestIniTemplateGenerator:
 # Edge / Unit-level Tests
 # ---------------------------------------------------------------------
 
-@pytest.mark.filterwarnings("ignore:.*include_z.*:DeprecationWarning")
 class TestEdgeCases:
     """Unit-level tests for edge cases and argument parsing."""
 

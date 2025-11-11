@@ -99,7 +99,7 @@ def setup_logging(enable_file: bool = True) -> logging.Logger:
     - File logging can be disabled with enable_file=False
     """
     
-    log = logging.getLogger("ini_template_generator")
+    log = logging.getLogger(__name__)
     log.setLevel(logging.INFO)
 
     # Prevent duplicate handlers on repeated runs

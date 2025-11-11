@@ -155,7 +155,7 @@ def write_template_config(
         TEMPLATE.format(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         encoding="utf-8"
     )
-    log.info(f"✓ INI configuration template created at:\n   {filename}")
+    log.info(f"✓ Done!")
     print("\nNext steps:")
     print(f"  Edit '{filename.name}' and replace all '<required: ...>' fields and placeholders")
 

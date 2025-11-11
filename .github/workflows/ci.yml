@@ -32,6 +32,7 @@ jobs:
       # ---------------------------------------------------------------
       # STEP 2: Set up Conda environment from iceroad_env.yaml
       # ---------------------------------------------------------------
+
       - name: Set up Miniconda (${{ matrix.python }})
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -39,9 +40,9 @@ jobs:
           environment-file: iceroad_env.yaml
           python-version: ${{ matrix.python }}
           auto-activate-base: false
-          miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           use-mamba: true
-          cache: true
+          cache-downloads: true
           auto-update-conda: false
 
       # ---------------------------------------------------------------

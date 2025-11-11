@@ -9,7 +9,7 @@ Description:
 Arguments:
     <output.ini>
         Target path for the generated INI file. This may be:
-          • An absolute path:      /abs/path/config.ini
+          • An absolute path:      /abs/path/run01.ini
           • A relative path:       configs/run01.ini  (relative to current working directory)
           • A bare filename:       run01.ini          (saved in current working directory)
 
@@ -37,13 +37,8 @@ from pathlib import Path
 
 
 # ----------------------------------------------------------------------
-# Logging setup
+# Template Definition
 # ----------------------------------------------------------------------
-log = logging.getLogger("ini_template_generator")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s",
-)
 
 TEMPLATE = """# ==============================================================
 # Ice Road .INI file Configuration Template
@@ -92,8 +87,53 @@ threshold =
 window = 
 """
 
+# ----------------------------------------------------------------------
+# Logging setup
+# ----------------------------------------------------------------------
 
-def write_template_config(filename: Path, force: bool = False) -> None:
+def setup_logging(enable_file: bool = True) -> logging.Logger:
+    """
+    Configure logging for ini_template_generator.
+
+    - Logs to both console and (optionally) a timestamped file in ./logs/
+    - File logging can be disabled with enable_file=False
+    """
+    
+    log = logging.getLogger("ini_template_generator")
+    log.setLevel(logging.INFO)
+
+    # Prevent duplicate handlers on repeated runs
+    if log.hasHandlers():
+        return log
+
+    # Console handler (always active)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    log.addHandler(console_handler)
+
+    if enable_file:
+        log_dir = Path.cwd() / "logs"
+        log_dir.mkdir(exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = log_dir / f"ini_template_generator_{timestamp}.log"
+
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+        log.addHandler(file_handler)
+
+        log.info(f"Logging to: {log_file}")
+
+    return log
+
+# ----------------------------------------------------------------------
+# Core functionality
+# ----------------------------------------------------------------------
+
+
+def write_template_config(
+        filename: Path, log: logging.Logger, force: bool = False
+) -> None:
 
     """
     Write the INI template to the target filename.
@@ -101,7 +141,7 @@ def write_template_config(filename: Path, force: bool = False) -> None:
     - Prompts before overwrite unless `force=True`.
     """
 
-    log.info(f"Preparing to create INI template at: {filename}")
+    log.info(f"Preparing to create INI template at:\n   {filename}")
     filename.parent.mkdir(parents=True, exist_ok=True)
 
     if filename.exists() and not force:
@@ -119,14 +159,25 @@ def write_template_config(filename: Path, force: bool = False) -> None:
     print("\nNext steps:")
     print(f"  Edit '{filename.name}' and replace all '<required: ...>' fields and placeholders")
 
+
+# ----------------------------------------------------------------------
+# CLI Entrypoint
+# ----------------------------------------------------------------------
+
 def main(argv: list[str]) -> int:
+
+    """CLI Entrypoint"""
+
     if len(argv) < 2 or "-h" in argv or "--help" in argv:
         print(__doc__)
         return 0 if len(argv) >= 2 else 1
 
-    # Parse args (very lightweight)
+    # Parse args
     force = "--force" in argv
-    # First non-flag argument is the output path. Safe because we expect a single non-flag arg
+    no_log = "--no-log-file" in argv
+    log = setup_logging(enable_file=not no_log)
+
+    # First non-flag argument = output path
     non_flag_args = [a for a in argv[1:] if not a.startswith("-")]
 
     if len(non_flag_args) == 0:
@@ -141,7 +192,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     out_path = Path(non_flag_args[0]).expanduser().resolve()
-    write_template_config(out_path, force=force)
+    write_template_config(filename=out_path, log=log, force=force)
     return 0
 
 if __name__ == "__main__":

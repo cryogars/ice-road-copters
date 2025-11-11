@@ -1,6 +1,6 @@
 """
 Usage:
-    ini_template_generator.py <output.ini> [--force]
+    ini_template_generator.py <output.ini> [--force] [--no-log-file]
     ini_template_generator.py -h | --help
 
 Description:
@@ -16,12 +16,15 @@ Arguments:
 Options:
     --force
         Overwrite the file if it already exists (skips confirmation).
+    --no-log-file
+        Disable writing to ini_template_generator.log (console output only).
     -h, --help
         Show this help message and exit.
 
 Examples:
     python ini_template_generator.py my_config.ini
-    python ini_template_generator.py configs/ice_road_run01.ini --force
+    python ini_template_generator.py configs/my_config.ini --force
+    python ini_template_generator.py my_config.ini --no-log-file
     python ini_template_generator.py --help
 """
 

@@ -19,5 +19,5 @@ dependencies:
   - laspy[lazrs,laszip]
   - pytest
 
-  - pip:
-      - -e .
+  # - pip:
+  #     - -e .

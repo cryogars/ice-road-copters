@@ -43,8 +43,10 @@ jobs:
           miniforge-variant: Miniforge3
           use-mamba: true
           auto-update-conda: false
+          conda-remove-defaults: true
           miniforge-version: latest
           channels: conda-forge
+          channel-priority: strict
       
 
       # ---------------------------------------------------------------

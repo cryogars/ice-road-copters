@@ -53,7 +53,8 @@ jobs:
         run: |
           echo "Python version:" $(python -V)
           conda info
-          conda list | head -15
+          echo "---- showing first 30 packages ----"
+          conda list | head -n 30 || true
 
       # ---------------------------------------------------------------
       # STEP 4: Run pytest suite
@@ -64,8 +65,9 @@ jobs:
           pytest -v --maxfail=1 --disable-warnings
 
       # ---------------------------------------------------------------
-      # STEP 5 (Optional): Upload logs and test artifacts
+      # STEP 5: Upload logs and test artifacts
       # ---------------------------------------------------------------
+
       - name: Upload logs and test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,4 +75,7 @@ jobs:
           name: test-logs-${{ matrix.os }}-py${{ matrix.python }}
           path: |
             logs/
+            **/logs/
+            **/*.log
             .pytest_cache/
+          if-no-files-found: warn

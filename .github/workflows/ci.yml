@@ -43,7 +43,6 @@ jobs:
           miniforge-variant: Miniforge3
           use-mamba: true
           auto-update-conda: false
-          conda-remove-defaults: true
       
 
       # ---------------------------------------------------------------
@@ -66,7 +65,8 @@ jobs:
           pytest -v --maxfail=1 --disable-warnings --ignore=scripts/
 
       # ---------------------------------------------------------------
-      # STEP 5: Upload logs and test artifacts
+      # STEP 5: Upload logs and test artifacts (keeping until I figure
+      # how to test the pipeline).
       # ---------------------------------------------------------------
 
       - name: Upload logs and test reports

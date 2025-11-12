@@ -42,8 +42,8 @@ jobs:
           auto-activate-base: false
           miniforge-variant: Miniforge3
           use-mamba: true
-          cache-downloads: true
           auto-update-conda: false
+      
 
       # ---------------------------------------------------------------
       # STEP 3: Verify Conda environment

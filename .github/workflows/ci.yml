@@ -45,7 +45,7 @@ jobs:
           auto-update-conda: false
           conda-remove-defaults: true
           miniforge-version: latest
-          channels: conda-forge
+          channels: conda-forge,defaults
           channel-priority: strict
       
 

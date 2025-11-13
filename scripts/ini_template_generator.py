@@ -40,50 +40,72 @@ from pathlib import Path
 # Template Definition
 # ----------------------------------------------------------------------
 
-TEMPLATE = """# ==============================================================
+TEMPLATE = """# ==============================================================================================================================================
 # Ice Road .INI file Configuration Template
 # Generated on {date}
-# ==============================================================================
-# Notes:
-#  - All paths can be absolute or relative to this config file.
-#  - Leave optional fields blank if not applicable.
-#  - Fields marked <required: ...> must be provided before running the pipeline.
-# ==============================================================================
+# ==============================================================================================================================================
+# USAGE:
+#     • Fill in all fields marked <required>.
+#     • Leave optional fields blank unless needed.
+#     • Paths may be absolute or relative to this INI file.
+#
+# FIELD DEFINITIONS:
+#     general.input_dir .............. (required): directory containing raw .laz/.las files
+#     general.debug .................. (optional: default = false): true/false — enable verbose logging
+#
+#     dem.user_dem ................... (optional): path to user-specified DEM
+#     dem.is_geoid ................... (required IF user_dem is supplied): 
+#                                        true  → DEM is geoid-based
+#                                        false → DEM is ellipsoid-based
+#
+#     alignment.shapefile ............ (required): .shp file to align with
+#     alignment.buffer_meters ........ (optional: default = 3.0): total width (meters) for transform area
+#     alignment.asp_dir .............. (optional; defaults to `./ASP/bin` when not given): 
+#                                        directory with ASP binary files
+#
+#     reflectance.shp_fp_rfl ......... (optional): shapefile to align for reflectance calibration.
+#                                        If given, it is assumed you want grain size output.
+#                                        Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
+#                                        "Intensity as Reflectance" returned by RIEGL.
+#     reflectance.imu_data ........... (optional): path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
+#                                        Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
+#     reflectance.cal_las ............ (optional): path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+#                                        To avoid confusion, please supply this file in a different directory from <in_dir>.
+#     reflectance.known_rfl .......... (optional, float/real): known intrinsic reflectance at 1064 nm for target identified in shp_fp_rfl
+#     reflectance.h2o ................ (optional, float): water column vapor in atmosphere (mm)
+#     reflectance.aod ................ (optional, float): aerosol optical depth at 550 nm
+#
+#     smrf.scalar .................... (optional, float): SMRF scalar parameter override
+#     smrf.slope ..................... (optional, float): SMRF slope override
+#     smrf.threshold ................. (optional, float): SMRF elevation threshold override
+#     smrf.window .................... (optional, float): SMRF window size override
+# ==============================================================================================================================================
 
 [general]
-# Required: directory containing .laz or .las LiDAR files
-input_dir = <required: path to input LiDAR directory>
-# Optional: enable verbose logging (true/false)
+input_dir = <required>
 debug = false
 
 [dem]
-# Optional: user-supplied DEM path. Leave blank to use internal DEM.
 user_dem =
-# Required if user_dem is provided: true if geoid-based, false if ellipsoid
-is_geoid = 
+is_geoid = <required if user_dem>
 
 [alignment]
-# Required: Shapefile (.shp) to align point clouds with (e.g. ice road centerline)
-shapefile = <required: path to alignment shapefile>
-# Optional: buffer width in meters (total width, not radius)
+shapefile = <required>
 buffer_meters = 3.0
-# Required: path to Ames Stereo Pipeline (ASP) binaries
-asp_dir = <required: path to ASP /bin directory>
+asp_dir =
 
 [reflectance]
-# Optional inputs for reflectance or snow grain size analysis
-shp_fp_rfl = 
-imu_data = 
-cal_las = 
-known_rfl = 
-h2o = 
-aod = 
+shp_fp_rfl =
+imu_data =
+cal_las =
+known_rfl =
+h2o =
+aod =
 
 [smrf]
-# Optional SMRF (Simple Morphological Filter) overrides
-scalar = 
-slope = 
-threshold = 
+scalar =
+slope =
+threshold =
 window = 
 """
 

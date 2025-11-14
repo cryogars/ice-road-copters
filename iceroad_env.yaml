@@ -2,9 +2,9 @@ name: iceroad
 channels:
   - conda-forge
 dependencies:
-  - python=3.9
-  - python-pdal=3.3.0
-  - pdal=2.6.2
+  - python>=3.11,<3.14
+  - python-pdal
+  - pdal
   - gdal
   - rioxarray
   - py3dep
@@ -16,3 +16,4 @@ dependencies:
   - xarray
   - pandas
   - laspy[lazrs,laszip]
+  - pytest

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - pipeline_update
+      - "feat/**"
+  pull_request:
+    branches:
+      - main
+      - pipeline_update
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+
+    steps:
+      # ---------------------------------------------------------------
+      # STEP 1: Checkout repository
+      # ---------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # ---------------------------------------------------------------
+      # STEP 2: Set up Conda environment from iceroad_env.yaml
+      # ---------------------------------------------------------------
+
+      - name: Set up Miniconda (${{ matrix.python }})
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: iceroad
+          environment-file: iceroad_env.yaml
+          python-version: ${{ matrix.python }}
+          auto-activate-base: false
+          miniforge-variant: Miniforge3
+          use-mamba: true
+          auto-update-conda: false
+          miniforge-version: latest
+          channels: conda-forge
+          channel-priority: strict
+      
+
+      # ---------------------------------------------------------------
+      # STEP 3: Verify Conda environment
+      # ---------------------------------------------------------------
+      - name: Verify environment
+        shell: bash -l {0}
+        run: |
+          echo "Python version:" $(python -V)
+          conda info
+          echo "---- showing first 30 packages ----"
+          conda list | head -n 30 || true
+
+      # ---------------------------------------------------------------
+      # STEP 4: Run pytest suite
+      # ---------------------------------------------------------------
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+          pytest -v --maxfail=1 --disable-warnings --ignore=scripts/
+
+      # ---------------------------------------------------------------
+      # STEP 5: Upload logs and test artifacts (keeping until I figure
+      # how to test the pipeline).
+      # ---------------------------------------------------------------
+
+      - name: Upload logs and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}-py${{ matrix.python }}
+          path: |
+            logs/
+            **/logs/
+            **/*.log
+            .pytest_cache/
+          if-no-files-found: ignore

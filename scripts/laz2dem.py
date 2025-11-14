@@ -64,7 +64,8 @@ def cl_call(command, log):
 
 def create_json_pipeline(
 in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
-        json_dir = './jsons', canopy = False, smrf_overrides=None
+        json_dir = './jsons', canopy = False, smrf_overrides=None,
+        use_dem_filter=True
 ):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
@@ -147,9 +148,25 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
 
     # set up pipeline
     if canopy:
-        pipeline = [reader, dem_filter, first_returns, las_writer]
+        pipeline = [reader, first_returns, las_writer]
+        if use_dem_filter:
+            pipeline.insert(1, dem_filter)
+
     else:
-        pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
+        pipeline = [reader, mongo_filter]
+
+        if use_dem_filter:
+            pipeline.append(dem_filter)
+
+        pipeline.extend([
+            elm_filter,
+            outlier_filter,
+            smrf_classifier,
+            smrf_selecter,
+            las_writer,
+            tif_writer
+        ])
+        
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
     os.makedirs(json_dir, exist_ok= True)
@@ -225,7 +242,11 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format, smrf_overrides=None):
+def las2uncorrectedDEM(
+        in_dir, debug, log, user_dem, las_extra_byte_format,
+        smrf_overrides=None,
+        use_dem_filter=True
+):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -302,7 +323,8 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format, smrf
         outtif=outtif,
         dem_fp=dem_fp,
         json_dir=json_dir,
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
     )
     log.debug(f"JSON to use is {json_to_use}")
 
@@ -323,7 +345,8 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format, smrf
         json_dir=json_dir,
         canopy=True,
         json_name='canopy',
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
     )
     log.debug(f"JSON to use is {json_to_use}")
 

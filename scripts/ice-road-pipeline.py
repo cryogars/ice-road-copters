@@ -27,6 +27,7 @@ Options:
     -L smrf_slope           (Optional) slope parameter for SMRF
     -T smrf_threshold       (Optional) threshold parameter for SMRF
     -W smrf_window          (Optional) window parameter for SMRF
+    -D skip-dem-filter      Disable PDAL DEM-based filtering before SMRF.
 
 """
 
@@ -117,6 +118,12 @@ if __name__ == '__main__':
         if value is not None:
             smrf_overrides[key] = float(value)
 
+    skip_dem_filter = args.get('-D')
+    if skip_dem_filter:
+        use_dem_filter = False
+    else:
+        use_dem_filter = True
+
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
@@ -169,7 +176,8 @@ if __name__ == '__main__':
         log,
         user_dem=user_dem,
         las_extra_byte_format=las_extra_byte_format,
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
     )
 
     log.info('Starting ASP laz align')

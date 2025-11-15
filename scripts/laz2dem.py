@@ -79,6 +79,7 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
     json_name (str) [optional]: name of json to save [default: las2dem.json]
     json_dir (str) [optional]: name of json subdirectory to create [default: ./json]
     smrf_overrides (dict | None) [optional]: optional SMRF parameter overrides keyed by PDAL field name.
+    use_dem_filter (bool): toggle on/of the DEM filter
 
     Returns:
     json_to_use (str): filepath of created json pipeline
@@ -255,6 +256,7 @@ def las2uncorrectedDEM(
     in_dir (str): filepath to directory to run in
     debug (bool): lots of yakety yak or not?
     smrf_overrides (dict | None): optional SMRF parameter overrides keyed by PDAL field name.
+    use_dem_filter (bool): toggle on/of the DEM filter.
 
     Returns:
     outtif (str): filepath to output DTM tiff

@@ -151,3 +151,6 @@ test/
 
 # password protection
 notebooks/quantum_ftp_download.ipynb
+
+.vs
+.idea

@@ -2,10 +2,14 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    laz2dem.py <in_dir> [-d debug]
+    laz2dem.py <in_dir> [-d debug] [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window]
 
 Options:
-    -d debug      turns on debugging logging  [default: True]
+    -d debug          turns on debugging logging  [default: True]
+    -S smrf_scalar    (Optional) Override SMRF scalar parameter (float)
+    -L smrf_slope     (Optional) Override SMRF slope parameter (float)
+    -T smrf_threshold (Optional) Override SMRF threshold parameter (float)
+    -W smrf_window    (Optional) Override SMRF window size (float)
 """
 import json
 import logging
@@ -58,7 +62,11 @@ def cl_call(command, log):
                 log.info(output.strip())
             break
 
-def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned', json_dir = './jsons', canopy = False):
+def create_json_pipeline(
+in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
+        json_dir = './jsons', canopy = False, smrf_overrides=None,
+        use_dem_filter=True
+):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
     Filters include: dem, elm, outlier
@@ -70,6 +78,8 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
     outtif (str): filepath to save dtm tif
     json_name (str) [optional]: name of json to save [default: las2dem.json]
     json_dir (str) [optional]: name of json subdirectory to create [default: ./json]
+    smrf_overrides (dict | None) [optional]: optional SMRF parameter overrides keyed by PDAL field name.
+    use_dem_filter (bool): toggle on/of the DEM filter
 
     Returns:
     json_to_use (str): filepath of created json pipeline
@@ -109,9 +119,12 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
                 "multiplier": 2.2
     }
     # SMRF classifier for ground
-    smrf_classifier = {"type": "filters.smrf",\
+    smrf_classifier = {"type": "filters.smrf",
         "ignore": "Classification[7:7], NumberOfReturns[0:0], ReturnNumber[0:0]"
     }
+
+    if smrf_overrides:
+        smrf_classifier.update(smrf_overrides)
     # Select ground points only
     smrf_selecter = { 
             "type":"filters.range",
@@ -136,9 +149,25 @@ def create_json_pipeline(in_fp, outlas, outtif, dem_fp, json_name = 'las2unalign
 
     # set up pipeline
     if canopy:
-        pipeline = [reader, dem_filter, first_returns, las_writer]
+        pipeline = [reader, first_returns, las_writer]
+        if use_dem_filter:
+            pipeline.insert(1, dem_filter)
+
     else:
-        pipeline = [reader, mongo_filter, dem_filter, elm_filter, outlier_filter, smrf_classifier,smrf_selecter, las_writer, tif_writer]
+        pipeline = [reader, mongo_filter]
+
+        if use_dem_filter:
+            pipeline.append(dem_filter)
+
+        pipeline.extend([
+            elm_filter,
+            outlier_filter,
+            smrf_classifier,
+            smrf_selecter,
+            las_writer,
+            tif_writer
+        ])
+        
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
     os.makedirs(json_dir, exist_ok= True)
@@ -214,7 +243,11 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
     log.debug(f"Saved to {dem_fp}")
     return dem_fp, crs, project
 
-def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
+def las2uncorrectedDEM(
+        in_dir, debug, log, user_dem, las_extra_byte_format,
+        smrf_overrides=None,
+        use_dem_filter=True
+):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
     builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
@@ -222,6 +255,8 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
     Parameters:
     in_dir (str): filepath to directory to run in
     debug (bool): lots of yakety yak or not?
+    smrf_overrides (dict | None): optional SMRF parameter overrides keyed by PDAL field name.
+    use_dem_filter (bool): toggle on/of the DEM filter.
 
     Returns:
     outtif (str): filepath to output DTM tiff
@@ -284,7 +319,15 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
 
     # DTM creation
     log.info("Creating DTM Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = outlas, outtif = outtif, dem_fp = dem_fp, json_dir = json_dir)
+    json_to_use = create_json_pipeline(
+        in_fp=mosaic_fp,
+        outlas=outlas,
+        outtif=outtif,
+        dem_fp=dem_fp,
+        json_dir=json_dir,
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
+    )
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running DTM pipeline")
@@ -296,9 +339,17 @@ def las2uncorrectedDEM(in_dir, debug, log, user_dem, las_extra_byte_format):
 
     # DSM creation
     log.info("Creating Canopy Pipeline...")
-    json_to_use = create_json_pipeline(in_fp = mosaic_fp, outlas = canopy_laz, \
-        outtif = canopy_laz.replace('laz','tif'), dem_fp = dem_fp, json_dir = json_dir, canopy = True,\
-        json_name='canopy')
+    json_to_use = create_json_pipeline(
+        in_fp=mosaic_fp,
+        outlas=canopy_laz,
+        outtif=canopy_laz.replace('laz', 'tif'),
+        dem_fp=dem_fp,
+        json_dir=json_dir,
+        canopy=True,
+        json_name='canopy',
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
+    )
     log.debug(f"JSON to use is {json_to_use}")
 
     log.info("Running Canopy pipeline")
@@ -342,7 +393,19 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    # setup logging
+    
+    smrf_overrides = {}
+    for flag, key in [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]:
+        value = args.get(flag)
+        if value is not None:
+            smrf_overrides[key] = float(value)
 
     # run main function
-    outtif, outlas = las2uncorrectedDEM(in_dir, debug, log)
+    outtif, outlas, _ = las2uncorrectedDEM(
+        in_dir=in_dir,
+        debug=debug,
+        log=log,
+        user_dem=None,
+        las_extra_byte_format=False,
+        smrf_overrides=smrf_overrides
+    )

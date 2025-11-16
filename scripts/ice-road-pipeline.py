@@ -2,7 +2,9 @@
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    ice-road-pipeline.py <in_dir> [-e user_dem] [-d debug] [-a asp_dir] [-s shp_fp] [-b buffer_meters] [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]  
+    ice-road-pipeline.py <in_dir> -s shp_fp [-e user_dem] [-d debug] [-a asp_dir] [-b buffer_meters] [-g geoid]
+                               [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]
+                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window] [-D]
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -20,27 +22,32 @@ Options:
                      To avoid confusion, please supply this file in a different directory from <in_dir>.
     -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
     -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
-    -o aod           (Optional) Aerosol optical depth at 550 nm (float) 
+    -o aod           (Optional) Aerosol optical depth at 550 nm (float)
+    -S smrf_scalar          (Optional) Scalar parameter for SMRF
+    -L smrf_slope           (Optional) slope parameter for SMRF
+    -T smrf_threshold       (Optional) threshold parameter for SMRF
+    -W smrf_window          (Optional) window parameter for SMRF
+    -D               Disable PDAL DEM-based filtering before SMRF (bool).
 
 """
 
-from cmath import exp
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
-from laz_align import laz_align
 import rioxarray as rio
-from rasterio.crs import CRS
 from datetime import datetime
 import logging
 import sys
 import os
 
 # local imports
-from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
+from laz2dem import las2uncorrectedDEM
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
 from las2grain import grain_pipeline
+
+SMRF_OPTIONS = [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]
+
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -103,6 +110,13 @@ if __name__ == '__main__':
     if aod:
         aod = float(aod)
 
+    smrf_overrides = {}
+    for flag, key in SMRF_OPTIONS:
+        value = args.get(flag)
+        if value is not None:
+            smrf_overrides[key] = float(value)
+
+    use_dem_filter = not args['-D']
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -149,10 +163,17 @@ if __name__ == '__main__':
     # run main functions
     log.info('Starting laz2uncorrectedDEM')
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-    outtif, outlas, canopy_laz = las2uncorrectedDEM(in_dir, debug, log, 
-                                                    user_dem = user_dem, 
-                                                    las_extra_byte_format = las_extra_byte_format)
-    
+
+    outtif, outlas, canopy_laz = las2uncorrectedDEM(
+        in_dir,
+        debug,
+        log,
+        user_dem=user_dem,
+        las_extra_byte_format=las_extra_byte_format,
+        smrf_overrides=smrf_overrides,
+        use_dem_filter=use_dem_filter
+    )
+
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
 

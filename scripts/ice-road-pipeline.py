@@ -4,7 +4,7 @@ Takes input directory full of .laz (or.las) files and filters+classifies them to
 Usage:
     ice-road-pipeline.py <in_dir> -s shp_fp [-e user_dem] [-d debug] [-a asp_dir] [-b buffer_meters] [-g geoid]
                                [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]
-                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window]  
+                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window] [-D]
 
 Options:
     -e user_dem      Path to user specifed DEM
@@ -27,29 +27,27 @@ Options:
     -L smrf_slope           (Optional) slope parameter for SMRF
     -T smrf_threshold       (Optional) threshold parameter for SMRF
     -W smrf_window          (Optional) window parameter for SMRF
-    -D skip-dem-filter      Disable PDAL DEM-based filtering before SMRF.
+    -D               Disable PDAL DEM-based filtering before SMRF (bool).
 
 """
 
-from cmath import exp
-
-from PyQt5.QtQml import kwargs
 from docopt import docopt
 from glob import glob
 from os.path import abspath, join, basename, isdir
-from laz_align import laz_align
 import rioxarray as rio
-from rasterio.crs import CRS
 from datetime import datetime
 import logging
 import sys
 import os
 
 # local imports
-from laz2dem import iceroad_logging, las2uncorrectedDEM, cl_call
+from laz2dem import las2uncorrectedDEM
 from laz_align import laz_align
 from dir_space_strip import replace_white_spaces
 from las2grain import grain_pipeline
+
+SMRF_OPTIONS = [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]
+
 
 if __name__ == '__main__':
     start_time = datetime.now()
@@ -113,16 +111,12 @@ if __name__ == '__main__':
         aod = float(aod)
 
     smrf_overrides = {}
-    for flag, key in [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]:
+    for flag, key in SMRF_OPTIONS:
         value = args.get(flag)
         if value is not None:
             smrf_overrides[key] = float(value)
 
-    skip_dem_filter = args.get('-D')
-    if skip_dem_filter:
-        use_dem_filter = False
-    else:
-        use_dem_filter = True
+    use_dem_filter = not args['-D']
 
     in_dir = args.get('<in_dir>')
     # convert to abspath

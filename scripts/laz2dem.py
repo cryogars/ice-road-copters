@@ -365,6 +365,88 @@ def las2uncorrectedDEM(
 
     return outtif, outlas, canopy_laz
 
+
+def aligned2dem(
+    aligned_laz: str,
+    dem_fp: str,
+    outlas: str,
+    json_dir: str,
+    log: logging.Logger,
+    use_dem_filter: bool = True
+) -> str:
+    """
+    Post-alignment PDAL pass.
+
+    Takes an ALIGNED point cloud (output of ASP pc_transform),
+    optionally applies filters.dem using the reference DEM,
+    and writes a filtered LAS/LAZ file.
+
+    Parameters
+    ----------
+    aligned_laz:
+        filepath to the aligned point cloud
+    dem_fp:
+        filepath to a DEM raster used for filtering
+    outlas:
+        output filepath to filtered aligned LAS/LAZ
+    json_dir:
+        directory path to store the generated PDAL JSON pipeline
+    log:
+        logger instance
+    use_dem_filter:
+        enables/disables dem filter stage
+
+    Returns
+    -------
+    path to the filtered aligned LAS/LAZ
+    """
+
+    aligned_laz = abspath(aligned_laz)
+    outlas = abspath(outlas)
+    dem_fp = abspath(dem_fp)
+
+    assert exists(aligned_laz), f"Aligned LAS/LAZ not found: {aligned_laz}"
+    assert exists(dem_fp), f"DEM raster not found: {dem_fp}"
+
+    reader = {
+        "type": "readers.las",
+        "filename": aligned_laz
+    }
+
+    dem_filter = {
+        "type": "filters.dem",
+        "raster": dem_fp,
+        "limits": "Z[-10:10]"
+    }
+
+    las_writer = {
+        "type": "writers.las",
+        "filename": outlas
+    }
+
+    pipeline = [reader]
+    if use_dem_filter:
+        pipeline.append(dem_filter)
+    else:
+        log.info("aligned2dem(): DEM filter disabled. Passing through LAS unchanged.")
+
+    pipeline.append(las_writer)
+
+    os.makedirs(json_dir, exist_ok=True)
+    json_to_use = join(json_dir, "aligned2dem.json")
+
+    with open(json_to_use, "w") as outfile:
+        json.dump(pipeline, outfile, indent=2)
+
+    log.info(f"Running post-alignment DEM filter on {aligned_laz}")
+    cl_call(f"pdal pipeline {json_to_use}", log)
+
+    if not exists(outlas):
+        raise RuntimeError(f"aligned2dem(): failed to produce output file {outlas}")
+
+    return outlas
+
+
 def iceroad_logging(log_dir, debug, log_prefix = 'las2uncorrectedDEM' ):
     os.makedirs(log_dir, exist_ok= True)
 

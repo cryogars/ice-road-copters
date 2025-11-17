@@ -215,8 +215,3 @@ def laz_align(in_dir,
        raise Exception('No final product created')
 
     return snow_tif, canopy_tif
-
-
-
-if __name__ == '__main__':
-    laz_align('/Users/brent/Documents/MCS/mcs0407/results')

@@ -112,7 +112,7 @@ def clip_align(
     if not exists(aligned_laz):
         raise Exception(f"Aligned point cloud not created: {aligned_laz}")
 
-    # NEW: Run post-alignment DEM-based filtering via PDAL
+    # Run post-alignment DEM-based filtering via PDAL
     filtered_laz = join(result_dir, f"filtered_{basename(final_tif)}.laz")
     log.info(f"Running post-alignment DEM filtering on {aligned_laz}")
     filtered_laz = aligned2dem(
@@ -144,7 +144,8 @@ def laz_align(in_dir,
             buffer_meters=3.0, 
             dem_is_geoid=False, 
             asp_dir = None,
-            las_extra_byte_format=False):
+            las_extra_byte_format=False,
+            use_dem_filter : bool =True):
     '''
     Align point cloud using snow-off road polygon.
 
@@ -154,6 +155,7 @@ def laz_align(in_dir,
     buffer_meters (float): number of meters to buffer geometry
     geoid (bool): leave as geoid or convert to ellispoid
     asp_dir (str): filepath to ASP bin directory
+    use_dem_filter: apply post-alignment DEM filtering
 
     Returns:
     final_tif (str): filepath to output corrected point cloud
@@ -199,11 +201,13 @@ def laz_align(in_dir,
         
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = snow_final_tif, is_canopy=False, las_extra_byte_format=las_extra_byte_format)
+        final_tif = snow_final_tif, is_canopy=False, las_extra_byte_format=las_extra_byte_format,
+        use_dem_filter=use_dem_filter)
 
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
-        final_tif = canopy_final_tif, is_canopy=True, las_extra_byte_format=las_extra_byte_format)
+        final_tif = canopy_final_tif, is_canopy=True, las_extra_byte_format=las_extra_byte_format,
+        use_dem_filter=use_dem_filter)
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif):

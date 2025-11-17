@@ -2,13 +2,17 @@
 from os.path import exists, join, basename, dirname, abspath, isdir
 from unittest import result
 import geopandas as gpd
-from laz2dem import cl_call
+from laz2dem import cl_call, aligned2dem
 import json
 import logging
 
 log = logging.getLogger(__name__)
 
-def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp_dir, final_tif, is_canopy=False, las_extra_byte_format=False):
+def clip_align(
+        input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid,
+        asp_dir, final_tif, is_canopy=False, las_extra_byte_format=False,
+        use_dem_filter=True
+):
     
     # Clip clean_PC to the transform_area using PDAL
     # input_laz = join(result_dir, basename(in_dir)+'_unaligned.laz')
@@ -103,10 +107,27 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                 {ref_dem} {input_laz}   \
                 -o {transform_pc}', log)
 
+    # Path to the aligned, transformed source point cloud from ASP
+    aligned_laz = f"{transform_pc}-trans_source.laz"
+    if not exists(aligned_laz):
+        raise Exception(f"Aligned point cloud not created: {aligned_laz}")
+
+    # NEW: Run post-alignment DEM-based filtering via PDAL
+    filtered_laz = join(result_dir, f"filtered_{basename(final_tif)}.laz")
+    log.info(f"Running post-alignment DEM filtering on {aligned_laz}")
+    filtered_laz = aligned2dem(
+        aligned_laz=aligned_laz,
+        dem_fp=ref_dem,
+        outlas=filtered_laz,
+        json_dir=json_dir,
+        log=log,
+        use_dem_filter=use_dem_filter
+    )
+
     # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
     point2dem_func = join(asp_dir, 'point2dem')
     # final_tif = join(ice_dir, 'pc-grid', 'run')
-    cl_call(f'{point2dem_func} {transform_pc}-trans_source.laz \
+    cl_call(f'{point2dem_func} {filtered_laz} \
                 --dem-spacing 0.5 --search-radius-factor 2 -o {final_tif}', log)
 
     return final_tif + '-DEM.tif'

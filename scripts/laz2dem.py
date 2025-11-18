@@ -366,40 +366,30 @@ def las2uncorrectedDEM(
     return outtif, outlas, canopy_laz
 
 
-def aligned2dem(
+def filter_dem(
     aligned_laz: str,
     dem_fp: str,
     outlas: str,
     json_dir: str,
-    log: logging.Logger,
-    use_dem_filter: bool = True
+    log: logging.Logger
 ) -> str:
     """
-    Post-alignment PDAL pass.
-
-    Takes an ALIGNED point cloud (output of ASP pc_transform),
-    optionally applies filters.dem using the reference DEM,
-    and writes a filtered LAS/LAZ file.
+    Apply PDAL DEM filtering to an already co-registered point cloud.
+    Outputs a DEM-filtered LAS/LAZ using filters.dem.
 
     Parameters
     ----------
-    aligned_laz:
-        filepath to the aligned point cloud
-    dem_fp:
-        filepath to a DEM raster used for filtering
-    outlas:
-        output filepath to filtered aligned LAS/LAZ
-    json_dir:
-        directory path to store the generated PDAL JSON pipeline
-    log:
-        logger instance
-    use_dem_filter:
-        enables/disables dem filter stage
+    aligned_laz: filepath to the aligned point cloud
+    dem_fp: filepath to a DEM raster used for filtering
+    outlas: output filepath to filtered aligned LAS/LAZ
+    json_dir: directory path to store the generated PDAL JSON pipeline
+    log: logger instance
 
     Returns
     -------
     path to the filtered aligned LAS/LAZ
     """
+
 
     aligned_laz = abspath(aligned_laz)
     outlas = abspath(outlas)
@@ -408,32 +398,16 @@ def aligned2dem(
     assert exists(aligned_laz), f"Aligned LAS/LAZ not found: {aligned_laz}"
     assert exists(dem_fp), f"DEM raster not found: {dem_fp}"
 
-    reader = {
-        "type": "readers.las",
-        "filename": aligned_laz
-    }
+    log.debug(f"Using DEM raster for filtering: {dem_fp}")
 
-    dem_filter = {
-        "type": "filters.dem",
-        "raster": dem_fp,
-        "limits": "Z[-10:10]"
-    }
-
-    las_writer = {
-        "type": "writers.las",
-        "filename": outlas
-    }
-
-    pipeline = [reader]
-    if use_dem_filter:
-        pipeline.append(dem_filter)
-    else:
-        log.info("aligned2dem(): DEM filter disabled. Passing through LAS unchanged.")
-
-    pipeline.append(las_writer)
+    pipeline = [
+        {"type": "readers.las", "filename": aligned_laz},
+        {"type": "filters.dem", "raster": dem_fp, "limits": "Z[-10:10]"},
+        {"type": "writers.las", "filename": outlas}
+    ]
 
     os.makedirs(json_dir, exist_ok=True)
-    json_to_use = join(json_dir, "aligned2dem.json")
+    json_to_use = join(json_dir, "filter_dem.json")
 
     with open(json_to_use, "w") as outfile:
         json.dump(pipeline, outfile, indent=2)
@@ -442,8 +416,9 @@ def aligned2dem(
     cl_call(f"pdal pipeline {json_to_use}", log)
 
     if not exists(outlas):
-        raise RuntimeError(f"aligned2dem(): failed to produce output file {outlas}")
-
+        raise RuntimeError(f"filter_dem(): failed to produce output file: {outlas}")
+    
+    log.info(f"Post-alignment DEM filter complete: {outlas}")
     return outlas
 
 

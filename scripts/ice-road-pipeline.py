@@ -170,8 +170,7 @@ if __name__ == '__main__':
         log,
         user_dem=user_dem,
         las_extra_byte_format=las_extra_byte_format,
-        smrf_overrides=smrf_overrides,
-        use_dem_filter=False # Pre-alignment DEM filtering permanently disabled
+        smrf_overrides=smrf_overrides
     )
 
     log.info('Starting ASP laz align')

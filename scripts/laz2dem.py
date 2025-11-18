@@ -64,8 +64,7 @@ def cl_call(command, log):
 
 def create_json_pipeline(
 in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
-        json_dir = './jsons', canopy = False, smrf_overrides=None,
-        use_dem_filter=True
+        json_dir = './jsons', canopy = False, smrf_overrides=None
 ):
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
@@ -79,7 +78,6 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
     json_name (str) [optional]: name of json to save [default: las2dem.json]
     json_dir (str) [optional]: name of json subdirectory to create [default: ./json]
     smrf_overrides (dict | None) [optional]: optional SMRF parameter overrides keyed by PDAL field name.
-    use_dem_filter (bool): toggle on/of the DEM filter
 
     Returns:
     json_to_use (str): filepath of created json pipeline
@@ -150,23 +148,17 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
     # set up pipeline
     if canopy:
         pipeline = [reader, first_returns, las_writer]
-        if use_dem_filter:
-            pipeline.insert(1, dem_filter)
-
     else:
-        pipeline = [reader, mongo_filter]
-
-        if use_dem_filter:
-            pipeline.append(dem_filter)
-
-        pipeline.extend([
+        pipeline = [
+            reader,
+            mongo_filter,
             elm_filter,
             outlier_filter,
             smrf_classifier,
             smrf_selecter,
             las_writer,
             tif_writer
-        ])
+        ]
         
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
@@ -245,8 +237,7 @@ def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sq
 
 def las2uncorrectedDEM(
         in_dir, debug, log, user_dem, las_extra_byte_format,
-        smrf_overrides=None,
-        use_dem_filter=True
+        smrf_overrides=None
 ):
     """
     Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
@@ -256,7 +247,6 @@ def las2uncorrectedDEM(
     in_dir (str): filepath to directory to run in
     debug (bool): lots of yakety yak or not?
     smrf_overrides (dict | None): optional SMRF parameter overrides keyed by PDAL field name.
-    use_dem_filter (bool): toggle on/of the DEM filter.
 
     Returns:
     outtif (str): filepath to output DTM tiff
@@ -325,8 +315,7 @@ def las2uncorrectedDEM(
         outtif=outtif,
         dem_fp=dem_fp,
         json_dir=json_dir,
-        smrf_overrides=smrf_overrides,
-        use_dem_filter=use_dem_filter
+        smrf_overrides=smrf_overrides
     )
     log.debug(f"JSON to use is {json_to_use}")
 
@@ -347,8 +336,7 @@ def las2uncorrectedDEM(
         json_dir=json_dir,
         canopy=True,
         json_name='canopy',
-        smrf_overrides=smrf_overrides,
-        use_dem_filter=use_dem_filter
+        smrf_overrides=smrf_overrides
     )
     log.debug(f"JSON to use is {json_to_use}")
 

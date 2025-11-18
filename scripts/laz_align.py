@@ -2,7 +2,7 @@
 from os.path import exists, join, basename, dirname, abspath, isdir
 from unittest import result
 import geopandas as gpd
-from laz2dem import cl_call, aligned2dem
+from laz2dem import cl_call, filter_dem
 import json
 import logging
 
@@ -107,22 +107,26 @@ def clip_align(
                 {ref_dem} {input_laz}   \
                 -o {transform_pc}', log)
 
-    # Path to the aligned, transformed source point cloud from ASP
-    aligned_laz = f"{transform_pc}-trans_source.laz"
+    # Apply DEM filter to aligned point cloud
+    aligned_laz = f'{transform_pc}-trans_source.laz'
     if not exists(aligned_laz):
         raise Exception(f"Aligned point cloud not created: {aligned_laz}")
-
-    # Run post-alignment DEM-based filtering via PDAL
-    filtered_laz = join(result_dir, f"filtered_{basename(final_tif)}.laz")
-    log.info(f"Running post-alignment DEM filtering on {aligned_laz}")
-    filtered_laz = aligned2dem(
-        aligned_laz=aligned_laz,
-        dem_fp=ref_dem,
-        outlas=filtered_laz,
-        json_dir=json_dir,
-        log=log,
-        use_dem_filter=use_dem_filter
-    )
+    
+    if use_dem_filter:
+        # Run post-alignment DEM-based filtering via PDAL
+        log.info("Post-alignment DEM filtering ENABLED")
+        stem = basename(final_tif).replace(".tif", "")
+        filtered_laz = join(result_dir, 'pc-transform', f"{stem}_filtered.laz")
+        filtered_laz = filter_dem(
+            aligned_laz=aligned_laz,
+            dem_fp=ref_dem,
+            outlas=filtered_laz,
+            json_dir=json_dir,
+            log=log,
+        )
+    else:
+        log.info("Post-alignment DEM filtering DISABLED — using aligned LAS directly")
+        filtered_laz = aligned_laz
 
     # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
     point2dem_func = join(asp_dir, 'point2dem')

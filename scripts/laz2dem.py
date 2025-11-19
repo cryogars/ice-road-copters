@@ -355,41 +355,39 @@ def las2uncorrectedDEM(
 
 
 def filter_dem(
-    aligned_laz: str,
+    input_laz: str,
     dem_fp: str,
     outlas: str,
     json_dir: str,
     log: logging.Logger
 ) -> str:
     """
-    Apply PDAL DEM filtering to an already co-registered point cloud.
-    Outputs a DEM-filtered LAS/LAZ using filters.dem.
+    Apply PDAL DEM filtering to a point cloud (https://pdal.io/en/stable/stages/filters.dem.html).
 
     Parameters
     ----------
-    aligned_laz: filepath to the aligned point cloud
+    input_laz: path to a LAS/LAZ file to filter
     dem_fp: filepath to a DEM raster used for filtering
-    outlas: output filepath to filtered aligned LAS/LAZ
+    outlas: output path for the DEM-filtered LAS/LAZ file
     json_dir: directory path to store the generated PDAL JSON pipeline
     log: logger instance
 
     Returns
     -------
-    path to the filtered aligned LAS/LAZ
+    File path to the generated DEM-filtered LAS/LAZ.
     """
 
-
-    aligned_laz = abspath(aligned_laz)
+    input_laz = abspath(input_laz)
     outlas = abspath(outlas)
     dem_fp = abspath(dem_fp)
 
-    assert exists(aligned_laz), f"Aligned LAS/LAZ not found: {aligned_laz}"
+    assert exists(input_laz), f"Input LAS/LAZ not found: {input_laz}"
     assert exists(dem_fp), f"DEM raster not found: {dem_fp}"
 
     log.debug(f"Using DEM raster for filtering: {dem_fp}")
 
     pipeline = [
-        {"type": "readers.las", "filename": aligned_laz},
+        {"type": "readers.las", "filename": input_laz},
         {"type": "filters.dem", "raster": dem_fp, "limits": "Z[-10:10]"},
         {"type": "writers.las", "filename": outlas}
     ]
@@ -400,13 +398,13 @@ def filter_dem(
     with open(json_to_use, "w") as outfile:
         json.dump(pipeline, outfile, indent=2)
 
-    log.info(f"Running post-alignment DEM filter on {aligned_laz}")
+    log.info(f"Running DEM filter: input={input_laz}, DEM={dem_fp}")
     cl_call(f"pdal pipeline {json_to_use}", log)
 
     if not exists(outlas):
         raise RuntimeError(f"filter_dem(): failed to produce output file: {outlas}")
     
-    log.info(f"Post-alignment DEM filter complete: {outlas}")
+    log.info(f"DEM filter complete: {outlas}")
     return outlas
 
 

@@ -17,16 +17,14 @@ import os
 import shlex
 import subprocess
 import sys
-import time
 from datetime import datetime
 from typing import Optional
 from glob import glob
-from os.path import abspath, basename, dirname, exists, isdir, join, expanduser
+from os.path import abspath, basename, exists, isdir, join
 
 import laspy
 import py3dep
 import pyproj
-import rioxarray as rxa
 from docopt import docopt
 from rasterio.enums import Resampling
 from shapely.geometry import box

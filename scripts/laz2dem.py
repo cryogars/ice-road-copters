@@ -384,7 +384,7 @@ def filter_dem(
     assert exists(input_laz), f"Input LAS/LAZ not found: {input_laz}"
     assert exists(dem_fp), f"DEM raster not found: {dem_fp}"
 
-    log.debug(f"Using DEM raster for filtering: {dem_fp}")
+    log.debug(f"Using {dem_fp} raster for filtering")
 
     pipeline = [
         {"type": "readers.las", "filename": input_laz},
@@ -398,13 +398,13 @@ def filter_dem(
     with open(json_to_use, "w") as outfile:
         json.dump(pipeline, outfile, indent=2)
 
-    log.info(f"Running DEM filter: input={input_laz}, DEM={dem_fp}")
+    log.info(f"Running DEM filter on {input_laz}")
     cl_call(f"pdal pipeline {json_to_use}", log)
 
     if not exists(outlas):
         raise RuntimeError(f"filter_dem(): failed to produce output file: {outlas}")
     
-    log.info(f"DEM filter complete: {outlas}")
+    log.info(f"DEM filtering complete: {outlas}")
     return outlas
 
 

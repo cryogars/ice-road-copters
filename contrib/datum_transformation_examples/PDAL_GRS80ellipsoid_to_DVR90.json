@@ -1,0 +1,13 @@
+[
+    "./1km_6135_632.laz",
+    {
+        "type":"filters.reprojection",
+        "in_srs":"EPSG:25832",
+        "out_srs":"+init=epsg:25832 +geoidgrids=C:/data/geoids/dvr90.gtx"
+    },
+    {
+        "type":"writers.las",
+        "a_srs":"EPSG:7416",
+        "filename":"1km_6135_632_DVR90.laz"
+    }
+]

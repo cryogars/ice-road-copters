@@ -44,33 +44,8 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
 
     log.info('Point cloud clipped to area')
 
-    # Define paths for next if statement
-    in_dem = join(result_dir, 'dem.tif')
-    
-    if dem_is_geoid is True:
-        # ASP needs NAVD88 conversion to be in NAD83 (not WGS84)
-        nad83_dem = join(result_dir, 'demNAD_tmp.tif')
-        gdal_func = join(asp_dir, 'gdalwarp')
-        cl_call(f'{gdal_func} -t_srs EPSG:26911 {in_dem} {nad83_dem}', log)
-        # Use ASP to convert from geoid to ellipsoid
-        ellisoid_dem = join(result_dir, 'dem_wgs')
-        geoid_func = join(asp_dir, 'dem_geoid')
-        cl_call(f'{geoid_func} --nodata_value -9999 {nad83_dem} \
-                --geoid NAVD88 --reverse-adjustment -o {ellisoid_dem}', log)
-        # Set it back to WGS84
-        ref_dem = join(result_dir, 'ellipsoid_DEM.tif')
-        cl_call(f'{gdal_func} -t_srs EPSG:32611 {ellisoid_dem}-adj.tif {ref_dem}', log)
-
-        # check for success
-        if not exists(ref_dem):
-            raise Exception('Conversion to ellipsoid failed')
-
-        log.info('Merged DEM converted to ellipsoid per user input')
-
-    else:
-        # cl_call('cp '+ in_dem +' '+ ref_dem, log)
-        ref_dem = in_dem
-        log.info('Merged DEM was kept in original ellipsoid form...')
+    # Define paths
+    ref_dem = join(result_dir, 'dem.tif')
 
     # Call ASP pc_align function on road and DEM and output translation/rotation matrix
     align_pc = join(result_dir,'pc-align',basename(final_tif))
@@ -79,6 +54,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
     cl_call(f'{pc_align_func} --max-displacement 5 --highest-accuracy \
                 {ref_dem} {clipped_pc} -o {align_pc}', log)
     
+    # FOR GRAIN SIZE CALCS
     # Since there are issues in transforming the point cloud and retaining reflectance,
     # the best I can do is translation only and no rotation..
     # Therefore, in this section, if the mode is set to calc Grain Size, an additional pc_align 
@@ -93,7 +69,7 @@ def clip_align(input_laz, buff_shp, result_dir, json_dir, log, dem_is_geoid, asp
                     {ref_dem} {clipped_pc}   \
                     -o {transform_pc_temp}', log)     
         
-
+    # FOR NORMAL ICE-ROAD PIPELINE (includes rotation)
     # Apply transformation matrix to the entire laz and output points
     # https://groups.google.com/g/ames-stereo-pipeline-support/c/XVCJyXYXgIY/m/n8RRmGXJFQAJ
     transform_pc = join(result_dir,'pc-transform',basename(final_tif))

@@ -165,10 +165,9 @@ if __name__ == '__main__':
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
 
     outtif, outlas, canopy_laz = las2uncorrectedDEM(
-        in_dir,
-        debug,
-        log,
-        user_dem=user_dem,
+        in_dir=in_dir,
+        log=log,
+        debug=debug,
         las_extra_byte_format=las_extra_byte_format,
         smrf_overrides=smrf_overrides
     )
@@ -177,12 +176,12 @@ if __name__ == '__main__':
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
     log.info(f'Post-alignment DEM filtering: {"ENABLED" if use_post_dem_filter else "DISABLED"}')
 
-
     snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, 
                                      asp_dir = asp_dir,log = log, input_laz = outlas, 
                                      canopy_laz = canopy_laz, dem_is_geoid= geoid, 
                                      buffer_meters=buffer_meters,
-                                     las_extra_byte_format=las_extra_byte_format, use_dem_filter=use_post_dem_filter)
+                                     las_extra_byte_format=las_extra_byte_format, use_dem_filter=use_post_dem_filter,
+                                     user_dem=user_dem, force_dem_redownload=False, force_align=True)
     
     # clean up after ASP a bit
     for fp in os.listdir(ice_dir):

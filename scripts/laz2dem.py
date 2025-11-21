@@ -235,7 +235,8 @@ def las2uncorrectedDEM(
         log: logging.Logger,
         debug: bool = False,
         las_extra_byte_format: bool = False,
-        smrf_overrides: dict[str, float] | None = None
+        smrf_overrides: dict[str, float] | None = None,
+        force_overwrite: bool = False
 ) -> tuple[str, str, str]:
     """
     Takes a input directory of laz files. Mosaics them, builds JSON pipeline,
@@ -273,13 +274,13 @@ def las2uncorrectedDEM(
     outtif = join(results_dir, f'{basename(in_dir)}_unaligned.tif')
     outlas = join(results_dir, f'{basename(in_dir)}_unaligned.laz')
     canopy_laz = join(results_dir, f'{basename(in_dir)}_canopy_unaligned.laz')
-    if exists(outtif):
-        while True:
-            ans = input("Uncorrected tif already exists. Enter y to overwrite and n to use existing:")
-            if ans.lower() == 'n':
-                return outtif, outlas, canopy_laz
-            elif ans.lower() == 'y':
-                break
+    
+    if exists(outtif) and not force_overwrite:
+        log.info("Reusing existing uncorrected TIF")
+        return outtif, outlas, canopy_laz
+    elif exists(outtif) and force_overwrite:
+        log.info("Overwriting existing uncorrected TIF")
+
     # mosaic
     log.info("Starting to mosaic las files...")
     if las_extra_byte_format is True:

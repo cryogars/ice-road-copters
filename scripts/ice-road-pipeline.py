@@ -4,30 +4,31 @@ Takes input directory full of .laz (or.las) files and filters+classifies them to
 Usage:
     ice-road-pipeline.py <in_dir> -s shp_fp [-e user_dem] [-d debug] [-a asp_dir] [-b buffer_meters] [-g geoid]
                                [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]
-                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window] [-D]
+                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window] [-D] [-F]
 
 Options:
-    -e user_dem      Path to user specifed DEM
-    -d debug         turns on debugging logging
-    -a asp_dir       Directory with ASP binary files
-    -s shp_fp        Shapefile to align with
-    -b buffer_meters Total width for the transform area
-    -g geoid         Is the reference DEM in geoid
-    -r shp_fp_rfl    (Optional) Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
-                     Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
-                     "Intensity as Reflectance" returned by RIEGL.
-    -i imu_data      (Optional) Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
-                     Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
-    -c cal_las       (Optional) Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
-                     To avoid confusion, please supply this file in a different directory from <in_dir>.
-    -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
-    -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
-    -o aod           (Optional) Aerosol optical depth at 550 nm (float)
+    -e user_dem              Path to user specifed DEM
+    -d debug                turns on debugging logging
+    -a asp_dir              Directory with ASP binary files
+    -s shp_fp               Shapefile to align with
+    -b buffer_meters        Total width for the transform area
+    -g geoid                Is the reference DEM in geoid
+    -r shp_fp_rfl           (Optional) Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
+                            Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
+                            "Intensity as Reflectance" returned by RIEGL.
+    -i imu_data             (Optional) Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
+                            Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
+    -c cal_las              (Optional) Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+                            To avoid confusion, please supply this file in a different directory from <in_dir>.
+    -k known_rfl            (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
+    -h h2o                  (Optional) Water Column Vapor in atmosphere in mm (float) 
+    -o aod                  (Optional) Aerosol optical depth at 550 nm (float)
     -S smrf_scalar          (Optional) Scalar parameter for SMRF
     -L smrf_slope           (Optional) slope parameter for SMRF
     -T smrf_threshold       (Optional) threshold parameter for SMRF
     -W smrf_window          (Optional) window parameter for SMRF
-    -D               Skip DEM filtering after ASP co-registration (bool, default = False)
+    -D                      Skip DEM filtering after ASP co-registration (bool, default = False)
+    -F                      Force overwrite: regenerate DEM and TIFs (uncorrected and aligned) even if they already exist (default = False)
 
 """
 
@@ -117,6 +118,7 @@ if __name__ == '__main__':
             smrf_overrides[key] = float(value)
 
     use_post_dem_filter = not args.get('-D')
+    force_overwrite = args.get('-F')
 
     in_dir = args.get('<in_dir>')
     # convert to abspath
@@ -169,7 +171,8 @@ if __name__ == '__main__':
         log=log,
         debug=debug,
         las_extra_byte_format=las_extra_byte_format,
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        force_overwrite=force_overwrite
     )
 
     log.info('Starting ASP laz align')
@@ -181,7 +184,7 @@ if __name__ == '__main__':
                                      canopy_laz = canopy_laz, dem_is_geoid= geoid, 
                                      buffer_meters=buffer_meters,
                                      las_extra_byte_format=las_extra_byte_format, use_dem_filter=use_post_dem_filter,
-                                     user_dem=user_dem, force_dem_redownload=False, force_align=True)
+                                     user_dem=user_dem, force_overwrite=force_overwrite)
     
     # clean up after ASP a bit
     for fp in os.listdir(ice_dir):

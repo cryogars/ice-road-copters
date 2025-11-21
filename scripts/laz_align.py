@@ -164,8 +164,7 @@ def laz_align(in_dir: str,
             las_extra_byte_format: bool=False,
             use_dem_filter : bool =True,
             user_dem: str | None = None,
-            force_dem_redownload: bool = False,
-            force_align: bool = False
+            force_overwrite: bool = False
             ) -> tuple[str, str]:
     """
     Align point cloud using snow-off road polygon.
@@ -203,7 +202,7 @@ def laz_align(in_dir: str,
         log.info(f"Using user provided DEM: {user_dem}")
         cl_call(f"cp {user_dem} {dem_fp}", log)
 
-    elif force_dem_redownload or not exists(dem_fp):
+    elif force_overwrite or not exists(dem_fp):
         log.info("Starting DEM download...")
         mosaic_fp = join(result_dir, 'unfiltered_merge.laz')
         if not exists(mosaic_fp):
@@ -247,10 +246,10 @@ def laz_align(in_dir: str,
 
     snow_final_tif = join(ice_dir, basename(in_dir)+'-snow')
     canopy_final_tif = join(ice_dir, basename(in_dir)+'-canopy')
-    if exists(snow_final_tif + '.tif') and exists(canopy_final_tif + '.tif') and not force_align:
+    if exists(snow_final_tif + '.tif') and exists(canopy_final_tif + '.tif') and not force_overwrite:
          log.info("Reusing existing aligned TIF")
          return snow_final_tif + '.tif', canopy_final_tif+ '.tif'
-    elif exists(snow_final_tif + '.tif') and exists(canopy_final_tif + '.tif') and force_align:
+    elif exists(snow_final_tif + '.tif') and exists(canopy_final_tif + '.tif') and force_overwrite:
         log.info("Overwriting aligned TIF")
         
     snow_tif = clip_align(input_laz=input_laz, buff_shp=buff_shp, result_dir=result_dir,\

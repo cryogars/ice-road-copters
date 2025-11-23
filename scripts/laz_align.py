@@ -3,7 +3,7 @@ import os
 from os.path import exists, join, basename, dirname, abspath, isdir
 from unittest import result
 import geopandas as gpd
-from laz2dem import cl_call, filter_dem, download_dem
+from laz2dem import cl_call, filter_dem
 import json
 import logging
 
@@ -157,13 +157,13 @@ def laz_align(in_dir: str,
             log: logging.Logger,
             input_laz: str,
             canopy_laz: str,
+            user_dem: str,
             align_shp: str = 'transform_area/hwy_21/hwy_21_utm_edit_v2.shp',
             buffer_meters: float = 3.0, 
             dem_is_geoid: bool = False, 
             asp_dir: str | None = None,
             las_extra_byte_format: bool=False,
             use_dem_filter : bool =True,
-            user_dem: str | None = None,
             force_overwrite: bool = False
             ) -> tuple[str, str]:
     """
@@ -176,8 +176,8 @@ def laz_align(in_dir: str,
     dem_is_geoid: leave as geoid or convert to ellispoid
     asp_dir: filepath to ASP bin directory
     use_dem_filter: apply post-alignment DEM filtering
-    user_dem: user-specified DEM. When set to `None`, 
-              one will be downloaded internally and stored in ./ice-roads/results/dem.tif
+    user_dem: user-specified DEM (required)
+    force_overwrite: force overwrite aligned TIF (default = False)
 
     Returns:
     final_tif: filepath to output corrected point cloud
@@ -192,34 +192,19 @@ def laz_align(in_dir: str,
     os.makedirs(result_dir, exist_ok= True)
     os.makedirs(json_dir, exist_ok= True)
     
-    #---------------------------------------------
-    # DEM acquisition (download or reuse existing)
-    #---------------------------------------------
+    #------------
+    # Process DEM
+    #------------
 
-    dem_fp = join(result_dir, 'dem.tif')
+    if not user_dem.lower().endswith((".tif", ".tiff")):
+        raise RuntimeError(f"DEM must be a .tif file: {user_dem}")
 
-    if user_dem:
-        log.info(f"Using user provided DEM: {user_dem}")
-        cl_call(f"cp {user_dem} {dem_fp}", log)
-
-    elif force_overwrite or not exists(dem_fp):
-        log.info("Starting DEM download...")
-        mosaic_fp = join(result_dir, 'unfiltered_merge.laz')
-        if not exists(mosaic_fp):
-            raise Exception("Missing mosaic file for DEM download")
-        
-        _, crs, project = download_dem(
-            las_fp=mosaic_fp, dem_fp=dem_fp,
-            cache_fp=join(result_dir, 'py3dep_cache', 'aiohttp_cache.sqlite')
-        )
-        log.info(f"DEM downloaded to: {dem_fp}")
-    
-    else:
-        log.info(f"Reusing existing DEM: {dem_fp}")
+    dem_fp = join(result_dir, "dem.tif")
+    log.info(f"Using user provided DEM: {user_dem}")
+    cl_call(f"cp {user_dem} {dem_fp}", log)
 
     if not exists(dem_fp):
-        raise RuntimeError(f"DEM required for alignment is missing: {dem_fp}")
-
+        raise RuntimeError(f"Failed to copy DEM to destination: expected file at {dem_fp}")
     
     # log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='asp_align')
     log.info('Starting ASP align')

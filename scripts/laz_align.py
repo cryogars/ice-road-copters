@@ -1,6 +1,6 @@
 # Import libraries
 import os
-from os.path import exists, join, basename, dirname, abspath, isdir
+from os.path import exists, join, basename, abspath, isdir
 from unittest import result
 import geopandas as gpd
 from laz2dem import cl_call, filter_dem
@@ -197,7 +197,7 @@ def laz_align(in_dir: str,
     #------------
 
     if not user_dem.lower().endswith((".tif", ".tiff")):
-        raise RuntimeError(f"DEM must be a .tif file: {user_dem}")
+        raise RuntimeError(f"User DEM must be a .tif file: {user_dem}")
 
     dem_fp = join(result_dir, "dem.tif")
     log.info(f"Using user provided DEM: {user_dem}")
@@ -206,7 +206,6 @@ def laz_align(in_dir: str,
     if not exists(dem_fp):
         raise RuntimeError(f"Failed to copy DEM to destination: expected file at {dem_fp}")
     
-    # log = iceroad_logging(join(work_dir, 'logs'), debug = True, log_prefix='asp_align')
     log.info('Starting ASP align')
 
     # todo: since the buffer is in meters, need to ensure inputs are in UTM and same

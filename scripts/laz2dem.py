@@ -195,41 +195,6 @@ def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.la
     
     return mosaic_fp
 
-def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sqlite'):
-    """
-    Reads the crs and bounds of a las file and downloads a DEM from py3dep
-    Must be in the CONUS.
-
-    Parameters:
-    las_fp (str): filepath to las file to get bounds and crs
-    dem_fp (str) [optional]: filepath to save DEM at. [default = './dem.tif']
-
-    Returns:
-    crs (pyproj CRS): CRS object from las header
-    project (shapely transform): shapely transform used in conversion
-    """
-    # read crs of las file
-    with laspy.open(las_fp) as las:
-        hdr = las.header
-        crs = hdr.parse_crs()
-    log.debug(f"CRS used is {crs}")
-    # create transform from wgs84 to las crs
-    wgs84 = pyproj.CRS('EPSG:4326')
-    project = pyproj.Transformer.from_crs(crs, wgs84 , always_xy=True).transform
-    # calculate bounds of las file in wgs84
-    utm_bounds = box(hdr.mins[0], hdr.mins[1], hdr.maxs[0], hdr.maxs[1])
-    wgs84_bounds = transform(project, utm_bounds)
-    # download dem inside bounds
-    os.environ["HYRIVER_CACHE_NAME"] = cache_fp
-    
-    dem_wgs = py3dep.get_map('DEM', wgs84_bounds, resolution=1, crs='EPSG:4326')
-    log.debug(f"DEM bounds: {dem_wgs.rio.bounds()}. Size: {dem_wgs.size}")
-    # reproject to las crs and save
-    dem_utm = dem_wgs.rio.reproject(crs, resampling = Resampling.cubic_spline)
-    dem_utm.rio.to_raster(dem_fp)
-    log.debug(f"Saved to {dem_fp}")
-    return dem_fp, crs, project
-
 def las2uncorrectedDEM(
         in_dir: str,
         log: logging.Logger,

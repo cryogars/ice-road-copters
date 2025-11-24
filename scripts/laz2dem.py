@@ -2,33 +2,28 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    laz2dem.py <in_dir> [-d debug] [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window]
+    laz2dem.py <in_dir> [--debug] [--smrf-scalar=<scalar>] [--smrf-slope=<slope>]
+               [--smrf-threshold=<threshold>] [--smrf-window=<window>]
 
-Options:
-    -d debug          turns on debugging logging  [default: True]
-    -S smrf_scalar    (Optional) Override SMRF scalar parameter (float)
-    -L smrf_slope     (Optional) Override SMRF slope parameter (float)
-    -T smrf_threshold (Optional) Override SMRF threshold parameter (float)
-    -W smrf_window    (Optional) Override SMRF window size (float)
+Flags:
+    --debug                         Enable debug logging (default = False)
+
+SMRF Overrides (optional):
+    --smrf-scalar=<scalar>          SMRF scalar parameter (float)
+    --smrf-slope=<slope>            SMRF slope parameter (float)
+    --smrf-threshold=<threshold>    SMRF threshold parameter (float)
+    --smrf-window=<window>          SMRF window parameter (float)
 """
 import json
 import logging
 import os
 import shlex
 import subprocess
-import sys
-from datetime import datetime
 from typing import Optional
 from glob import glob
+from docopt import docopt
 from os.path import abspath, basename, exists, isdir, join
 
-import laspy
-import py3dep
-import pyproj
-from docopt import docopt
-from rasterio.enums import Resampling
-from shapely.geometry import box
-from shapely.ops import transform
 
 log = logging.getLogger(__name__)
 
@@ -218,10 +213,6 @@ def las2uncorrectedDEM(
     --------
     Filepaths to generated DTM TIF, DTM LAS/LAZ, and canopy LAS.
     """
-    # log_dir = join(in_dir, 'logs')
-    # log = iceroad_logging(log_dir, debug, log_prefix = 'filter_classify')
-    #set start time
-    # start_time = datetime.now()
     # checks on directory and user update
     assert isdir(in_dir), f'Provided: {in_dir} is not a directory. Provide directory with .laz files.'
     log.info(f"Working in directory: {in_dir}")
@@ -298,10 +289,6 @@ def las2uncorrectedDEM(
         pipeline_cmd = f'pdal pipeline -i {json_to_use}'
     cl_call(pipeline_cmd, log)
 
-
-    # end_time = datetime.now()
-    # log.info(f"Completed! Run Time: {end_time - start_time}")
-
     return outtif, outlas, canopy_laz
 
 
@@ -365,12 +352,15 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    
-    smrf_overrides = {}
-    for flag, key in [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]:
-        value = args.get(flag)
-        if value is not None:
-            smrf_overrides[key] = float(value)
+
+    SMRF_OPTIONS = [
+        ('--smrf-scalar', 'scalar'),
+        ('--smrf-slope', 'slope'),
+        ('--smrf-threshold', 'threshold'),
+        ('--smrf-window', 'window'),
+    ]
+
+    smrf_overrides = {key: args[flag] for flag, key in SMRF_OPTIONS if args[flag] is not None}
 
     # run main function
     outtif, outlas, _ = las2uncorrectedDEM(

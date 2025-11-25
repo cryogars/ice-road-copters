@@ -16,4 +16,5 @@ dependencies:
   - xarray
   - pandas
   - laspy[lazrs,laszip]
+  - schema
   - pytest

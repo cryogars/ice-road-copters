@@ -21,9 +21,9 @@ def clip_align(
     json_path = join(json_dir, 'clip_to_shp.json')
 
     if not exists(input_laz):
-        raise FileNotFoundError(input_laz)
+        raise FileNotFoundError(f"Input point cloud not found: {input_laz}")
     if not exists(buff_shp):
-        raise FileNotFoundError(buff_shp)
+        raise FileNotFoundError(f"Buffered shapefile missing: {buff_shp}")
 
     if not asp_dir or not exists(asp_dir):
         raise RuntimeError(f"ASP directory invalid or missing: {asp_dir}")

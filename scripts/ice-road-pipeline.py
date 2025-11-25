@@ -130,7 +130,12 @@ def main():
     try:
         args = schema.validate(args)
     except SchemaError as e:
-        print(f"\nSCHEMA ERROR: {e}\n")
+        msg = str(e)
+        if " in " in msg:              # remove verbose dict printing
+            msg = msg.split(" in ")[0]
+        
+        print("\nArgument Error:")
+        print(f"  {msg}\n")
         sys.exit(1)
     
     # ---- extract args ----

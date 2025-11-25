@@ -367,7 +367,7 @@ if __name__ == '__main__':
         in_dir=in_dir,
         debug=debug,
         log=log,
-        user_dem=None,
         las_extra_byte_format=False,
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        force_overwrite=False
     )

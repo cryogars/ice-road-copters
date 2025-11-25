@@ -232,10 +232,10 @@ def las2uncorrectedDEM(
     canopy_laz = join(results_dir, f'{basename(in_dir)}_canopy_unaligned.laz')
     
     if exists(outtif) and not force_overwrite:
-        log.info("Reusing existing uncorrected TIF")
+        log.info("Using existing merged point cloud TIF")
         return outtif, outlas, canopy_laz
     elif exists(outtif) and force_overwrite:
-        log.info("Overwriting existing uncorrected TIF")
+        log.info("Overwriting existing merged point cloud TIF")
 
     # mosaic
     log.info("Starting to mosaic las files...")

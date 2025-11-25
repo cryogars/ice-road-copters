@@ -256,7 +256,6 @@ def main():
     canopyheight.rio.to_raster(canopy_fp)
 
     # ---- grain pipeline ----
-    # TODO: move to dedicated grain-pipeline.py
     if shp_fp_rfl:
         log.info("Running grain size pipeline...")
         grain_pipeline(

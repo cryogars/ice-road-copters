@@ -81,7 +81,7 @@ def main():
         # If user requested --help, allow docopt to print full help text normally
         if "--help" in sys.argv or "-h" in sys.argv:
             sys.exit(0)
-            
+
         print("\nERROR: Missing input directory <in_dir>.\n")
         print("Example:\n  ice-road-pipeline.py /tmp/data --shp=road.shp --dem=ref.tif\n")
         sys.exit(1)
@@ -201,7 +201,6 @@ def main():
     # ---- ASP alignment ----
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
-    log.info(f'Post-alignment DEM filtering: {"ENABLED" if not skip_filter else "DISABLED"}')
     snow_tif, canopy_tif = laz_align(
         in_dir=in_dir,
         align_shp=shp_fp,
@@ -266,8 +265,6 @@ def main():
     
     end_time = datetime.now()
     log.info(f"Completed! Pipeline runtime: {end_time - start_time}")
-
- 
 
 if __name__ == '__main__':
     main()

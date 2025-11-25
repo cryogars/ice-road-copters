@@ -126,9 +126,9 @@ def clip_align(
     if not exists(aligned_laz):
         raise Exception(f"Aligned point cloud not created: {aligned_laz}")
     
-    if use_dem_filter:
+    if use_dem_filter and not is_canopy:
         # Run post-alignment DEM-based filtering via PDAL
-        log.info("Post-alignment DEM filtering ENABLED")
+        log.info("Post-alignment DEM filtering ENABLED for for ground/DTM")
         stem = basename(final_tif).replace(".tif", "")
         filtered_laz = join(result_dir, 'pc-transform', f"{stem}_filtered.laz")
         filtered_laz = filter_dem(
@@ -139,7 +139,7 @@ def clip_align(
             log=log,
         )
     else:
-        log.info("Post-alignment DEM filtering DISABLED — using aligned LAS directly")
+        log.info("Post-alignment DEM filtering not applied")
         filtered_laz = aligned_laz
 
     # Grid the output to a 0.5 meter tif (NOTE: this needs to be changed to 1m if using py3dep)
@@ -244,7 +244,7 @@ def laz_align(in_dir: str,
     canopy_tif = clip_align(input_laz=canopy_laz, buff_shp=buff_shp, result_dir=result_dir,\
         json_dir=json_dir, log = log, dem_is_geoid=dem_is_geoid, asp_dir=asp_dir,\
         final_tif = canopy_final_tif, is_canopy=True, las_extra_byte_format=las_extra_byte_format,
-        dem_fp=dem_fp, use_dem_filter=use_dem_filter)
+        dem_fp=dem_fp, use_dem_filter=False)
 
     # For some reason this is returning 1 when a product IS created..
     if not exists(snow_tif):

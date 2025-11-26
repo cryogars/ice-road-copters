@@ -2,34 +2,28 @@
 Takes input directory full of .laz files and filters+classifies them to DTM laz and DTM tif.
 
 Usage:
-    laz2dem.py <in_dir> [-d debug] [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window]
+    laz2dem.py <in_dir> [--debug] [--smrf-scalar=<scalar>] [--smrf-slope=<slope>]
+               [--smrf-threshold=<threshold>] [--smrf-window=<window>]
 
-Options:
-    -d debug          turns on debugging logging  [default: True]
-    -S smrf_scalar    (Optional) Override SMRF scalar parameter (float)
-    -L smrf_slope     (Optional) Override SMRF slope parameter (float)
-    -T smrf_threshold (Optional) Override SMRF threshold parameter (float)
-    -W smrf_window    (Optional) Override SMRF window size (float)
+Flags:
+    --debug                         Enable debug logging (default = False)
+
+SMRF Overrides (optional):
+    --smrf-scalar=<scalar>          SMRF scalar parameter (float)
+    --smrf-slope=<slope>            SMRF slope parameter (float)
+    --smrf-threshold=<threshold>    SMRF threshold parameter (float)
+    --smrf-window=<window>          SMRF window parameter (float)
 """
 import json
 import logging
 import os
 import shlex
 import subprocess
-import sys
-import time
-from datetime import datetime
+from typing import Optional
 from glob import glob
-from os.path import abspath, basename, dirname, exists, isdir, join, expanduser
-
-import laspy
-import py3dep
-import pyproj
-import rioxarray as rxa
 from docopt import docopt
-from rasterio.enums import Resampling
-from shapely.geometry import box
-from shapely.ops import transform
+from os.path import abspath, basename, exists, isdir, join
+
 
 log = logging.getLogger(__name__)
 
@@ -63,26 +57,27 @@ def cl_call(command, log):
             break
 
 def create_json_pipeline(
-in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
-        json_dir = './jsons', canopy = False, smrf_overrides=None,
-        use_dem_filter=True
-):
+        in_fp: str, outlas: str, outtif: str,
+        json_name: Optional[str] = 'las2unaligned',
+        json_dir: Optional[str] = './jsons',
+        canopy: bool = False,
+        smrf_overrides: dict[str, float] | None = None
+) -> str:
     """
     Creates JSON Pipeline for standard las point cloud to DTM.
-    Filters include: dem, elm, outlier
+    Filters include: elm, outlier
     SMRF Classifier and writes ground classified points to las and tif
 
     Parameters:
-    in_fp (str): filepath to las file to be run
-    outlas (str): filepath to save dtm las
-    outtif (str): filepath to save dtm tif
-    json_name (str) [optional]: name of json to save [default: las2dem.json]
-    json_dir (str) [optional]: name of json subdirectory to create [default: ./json]
-    smrf_overrides (dict | None) [optional]: optional SMRF parameter overrides keyed by PDAL field name.
-    use_dem_filter (bool): toggle on/of the DEM filter
+    in_fp: filepath to las file to be run
+    outlas: filepath to save dtm las
+    outtif: filepath to save dtm tif
+    json_name: name of json to save [default: las2dem.json]
+    json_dir: name of json subdirectory to create [default: ./json]
+    smrf_overrides: optional SMRF parameter (scaler, slope threshold, and window) overrides.
 
     Returns:
-    json_to_use (str): filepath of created json pipeline
+    json_to_use: filepath of created json pipeline
     """
     ## make sure path is in format pdal likes
     in_fp = abspath(in_fp)
@@ -90,7 +85,6 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
     outtif = abspath(outtif)
 
     assert exists(in_fp), f'In filepath {in_fp} does not exist'
-    assert exists(dem_fp), f'DEM filepath {in_fp} does not exist'
 
     # good docs on types of filters used: https://pdal.io/stages/filters.html#ground-unclassified
     # Reads in mosaiced las file
@@ -102,12 +96,6 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
         "expression": {"$and": [\
             {"ReturnNumber": {"$gt": 0}},\
                 {"NumberOfReturns": {"$gt": 0}} ] } 
-    }
-    # Filter out points far away from our dem
-    dem_filter = {
-            "type":"filters.dem",
-            "raster":dem_fp,
-            "limits":"Z[25:35]"
     }
     # Extended Local Minimum filter
     elm_filter = {"type": "filters.elm"
@@ -150,23 +138,17 @@ in_fp, outlas, outtif, dem_fp, json_name = 'las2unaligned',
     # set up pipeline
     if canopy:
         pipeline = [reader, first_returns, las_writer]
-        if use_dem_filter:
-            pipeline.insert(1, dem_filter)
-
     else:
-        pipeline = [reader, mongo_filter]
-
-        if use_dem_filter:
-            pipeline.append(dem_filter)
-
-        pipeline.extend([
+        pipeline = [
+            reader,
+            mongo_filter,
             elm_filter,
             outlier_filter,
             smrf_classifier,
             smrf_selecter,
             las_writer,
             tif_writer
-        ])
+        ]
         
     # make json dir and fp
     log.debug(f"Making JSON dir at {json_dir}")
@@ -208,64 +190,29 @@ def mosaic_laz(in_dir, las_extra_byte_format, log, out_fp = 'unaligned_merged.la
     
     return mosaic_fp
 
-def download_dem(las_fp, dem_fp = 'dem.tif', cache_fp ='./cache/aiohttp_cache.sqlite'):
-    """
-    Reads the crs and bounds of a las file and downloads a DEM from py3dep
-    Must be in the CONUS.
-
-    Parameters:
-    las_fp (str): filepath to las file to get bounds and crs
-    dem_fp (str) [optional]: filepath to save DEM at. [default = './dem.tif']
-
-    Returns:
-    crs (pyproj CRS): CRS object from las header
-    project (shapely transform): shapely transform used in conversion
-    """
-    # read crs of las file
-    with laspy.open(las_fp) as las:
-        hdr = las.header
-        crs = hdr.parse_crs()
-    log.debug(f"CRS used is {crs}")
-    # create transform from wgs84 to las crs
-    wgs84 = pyproj.CRS('EPSG:4326')
-    project = pyproj.Transformer.from_crs(crs, wgs84 , always_xy=True).transform
-    # calculate bounds of las file in wgs84
-    utm_bounds = box(hdr.mins[0], hdr.mins[1], hdr.maxs[0], hdr.maxs[1])
-    wgs84_bounds = transform(project, utm_bounds)
-    # download dem inside bounds
-    os.environ["HYRIVER_CACHE_NAME"] = cache_fp
-    
-    dem_wgs = py3dep.get_map('DEM', wgs84_bounds, resolution=1, crs='EPSG:4326')
-    log.debug(f"DEM bounds: {dem_wgs.rio.bounds()}. Size: {dem_wgs.size}")
-    # reproject to las crs and save
-    dem_utm = dem_wgs.rio.reproject(crs, resampling = Resampling.cubic_spline)
-    dem_utm.rio.to_raster(dem_fp)
-    log.debug(f"Saved to {dem_fp}")
-    return dem_fp, crs, project
-
 def las2uncorrectedDEM(
-        in_dir, debug, log, user_dem, las_extra_byte_format,
-        smrf_overrides=None,
-        use_dem_filter=True
-):
+        in_dir: str,
+        log: logging.Logger,
+        debug: bool = False,
+        las_extra_byte_format: bool = False,
+        smrf_overrides: dict[str, float] | None = None,
+        force_overwrite: bool = False
+) -> tuple[str, str, str]:
     """
-    Takes a input directory of laz files. Mosaics them, downloads DEM within their bounds,
-    builds JSON pipeline, and runs PDAL pipeline of filter, classifying and saving DTM.
+    Takes a input directory of laz files. Mosaics them, builds JSON pipeline,
+    and runs PDAL pipeline of filter, classifying and saving DTM.
 
     Parameters:
-    in_dir (str): filepath to directory to run in
-    debug (bool): lots of yakety yak or not?
-    smrf_overrides (dict | None): optional SMRF parameter overrides keyed by PDAL field name.
-    use_dem_filter (bool): toggle on/of the DEM filter.
+    -----------
+    in_dir: filepath to directory to run in
+    log: logger instance
+    debug (default is False): lots of yakety yak or not? 
+    smrf_overrides: optional SMRF parameter (scaler, slope threshold, and window) overrides.
 
     Returns:
-    outtif (str): filepath to output DTM tiff
-    outlas (str): filepath to output DTM laz file
+    --------
+    Filepaths to generated DTM TIF, DTM LAS/LAZ, and canopy LAS.
     """
-    # log_dir = join(in_dir, 'logs')
-    # log = iceroad_logging(log_dir, debug, log_prefix = 'filter_classify')
-    #set start time
-    # start_time = datetime.now()
     # checks on directory and user update
     assert isdir(in_dir), f'Provided: {in_dir} is not a directory. Provide directory with .laz files.'
     log.info(f"Working in directory: {in_dir}")
@@ -283,13 +230,13 @@ def las2uncorrectedDEM(
     outtif = join(results_dir, f'{basename(in_dir)}_unaligned.tif')
     outlas = join(results_dir, f'{basename(in_dir)}_unaligned.laz')
     canopy_laz = join(results_dir, f'{basename(in_dir)}_canopy_unaligned.laz')
-    if exists(outtif):
-        while True:
-            ans = input("Uncorrected tif already exists. Enter y to overwrite and n to use existing:")
-            if ans.lower() == 'n':
-                return outtif, outlas, canopy_laz
-            elif ans.lower() == 'y':
-                break
+    
+    if exists(outtif) and not force_overwrite:
+        log.info("Using existing merged point cloud TIF")
+        return outtif, outlas, canopy_laz
+    elif exists(outtif) and force_overwrite:
+        log.info("Overwriting existing merged point cloud TIF")
+
     # mosaic
     log.info("Starting to mosaic las files...")
     if las_extra_byte_format is True:
@@ -303,19 +250,6 @@ def las2uncorrectedDEM(
     if not exists(mosaic_fp):
         log.warning('No mosaic created')
         return -1
-    # Allowing the code to use user input DEM
-    dem_fp = join(results_dir, 'dem.tif')
-
-    if not user_dem:
-        log.info("Starting DEM download...")
-        _, crs, project = download_dem(mosaic_fp, dem_fp = dem_fp, cache_fp= join(results_dir, 'py3dep_cache', 'aiohttp_cache.sqlite'))
-        log.debug(f"Downloaded dem to {dem_fp}")
-    else:
-        log.info("User DEM specified. Skipping DEM download...")
-        cl_call('cp '+ user_dem +' '+ dem_fp, log) #to ensure const. filenames for next step
-    if not exists(join(results_dir, 'dem.tif')):
-        log.warning('No DEM downloaded')
-        return -1
 
     # DTM creation
     log.info("Creating DTM Pipeline...")
@@ -323,10 +257,8 @@ def las2uncorrectedDEM(
         in_fp=mosaic_fp,
         outlas=outlas,
         outtif=outtif,
-        dem_fp=dem_fp,
         json_dir=json_dir,
-        smrf_overrides=smrf_overrides,
-        use_dem_filter=use_dem_filter
+        smrf_overrides=smrf_overrides
     )
     log.debug(f"JSON to use is {json_to_use}")
 
@@ -343,12 +275,10 @@ def las2uncorrectedDEM(
         in_fp=mosaic_fp,
         outlas=canopy_laz,
         outtif=canopy_laz.replace('laz', 'tif'),
-        dem_fp=dem_fp,
         json_dir=json_dir,
         canopy=True,
         json_name='canopy',
-        smrf_overrides=smrf_overrides,
-        use_dem_filter=use_dem_filter
+        smrf_overrides=smrf_overrides
     )
     log.debug(f"JSON to use is {json_to_use}")
 
@@ -359,32 +289,61 @@ def las2uncorrectedDEM(
         pipeline_cmd = f'pdal pipeline -i {json_to_use}'
     cl_call(pipeline_cmd, log)
 
-
-    # end_time = datetime.now()
-    # log.info(f"Completed! Run Time: {end_time - start_time}")
-
     return outtif, outlas, canopy_laz
 
-def iceroad_logging(log_dir, debug, log_prefix = 'las2uncorrectedDEM' ):
-    os.makedirs(log_dir, exist_ok= True)
 
-    old_logs = glob(join(log_dir, f'{log_prefix}*.log'))
-    if old_logs:
-        vnum = max([int(basename(i).split('.')[0].split('-')[-1].replace('r','')) for i in sorted(old_logs)]) + 1
-    else:
-        vnum = 1
+def filter_dem(
+    input_laz: str,
+    dem_fp: str,
+    outlas: str,
+    json_dir: str,
+    log: logging.Logger
+) -> str:
+    """
+    Apply PDAL DEM filtering to a point cloud (https://pdal.io/en/stable/stages/filters.dem.html).
 
-    logging.basicConfig(level=logging.INFO,
-    format=f"(ice-road-copters {__name__} %(levelname)s) %(message)s",
-    handlers=[
-        logging.FileHandler(join(log_dir, f'{log_prefix}-r{vnum}.log')),
-        logging.StreamHandler(sys.stdout)]
-    )
-    log = logging.getLogger(__name__)
-    if debug:
-        log.setLevel(logging.DEBUG)
+    Parameters
+    ----------
+    input_laz: path to a LAS/LAZ file to filter
+    dem_fp: filepath to a DEM raster used for filtering
+    outlas: output path for the DEM-filtered LAS/LAZ file
+    json_dir: directory path to store the generated PDAL JSON pipeline
+    log: logger instance
+
+    Returns
+    -------
+    File path to the generated DEM-filtered LAS/LAZ.
+    """
+
+    input_laz = abspath(input_laz)
+    outlas = abspath(outlas)
+    dem_fp = abspath(dem_fp)
+
+    assert exists(input_laz), f"Input LAS/LAZ not found: {input_laz}"
+    assert exists(dem_fp), f"DEM raster not found: {dem_fp}"
+
+    log.debug(f"Using {dem_fp} raster for filtering")
+
+    pipeline = [
+        {"type": "readers.las", "filename": input_laz},
+        {"type": "filters.dem", "raster": dem_fp, "limits": "Z[-10:10]"},
+        {"type": "writers.las", "filename": outlas}
+    ]
+
+    os.makedirs(json_dir, exist_ok=True)
+    json_to_use = join(json_dir, "filter_dem.json")
+
+    with open(json_to_use, "w") as outfile:
+        json.dump(pipeline, outfile, indent=2)
+
+    log.info(f"Running DEM filter on {input_laz}")
+    cl_call(f"pdal pipeline {json_to_use}", log)
+
+    if not exists(outlas):
+        raise RuntimeError(f"filter_dem(): failed to produce output file: {outlas}")
     
-    return log
+    log.info(f"DEM filtering complete: {outlas}")
+    return outlas
 
 if __name__ == '__main__':
     # get command line args
@@ -393,19 +352,22 @@ if __name__ == '__main__':
     in_dir = args.get('<in_dir>')
     # convert to abspath
     in_dir = abspath(in_dir)
-    
-    smrf_overrides = {}
-    for flag, key in [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]:
-        value = args.get(flag)
-        if value is not None:
-            smrf_overrides[key] = float(value)
+
+    SMRF_OPTIONS = [
+        ('--smrf-scalar', 'scalar'),
+        ('--smrf-slope', 'slope'),
+        ('--smrf-threshold', 'threshold'),
+        ('--smrf-window', 'window'),
+    ]
+
+    smrf_overrides = {key: args[flag] for flag, key in SMRF_OPTIONS if args[flag] is not None}
 
     # run main function
     outtif, outlas, _ = las2uncorrectedDEM(
         in_dir=in_dir,
         debug=debug,
         log=log,
-        user_dem=None,
         las_extra_byte_format=False,
-        smrf_overrides=smrf_overrides
+        smrf_overrides=smrf_overrides,
+        force_overwrite=False
     )

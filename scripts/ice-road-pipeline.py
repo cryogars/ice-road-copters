@@ -1,37 +1,54 @@
 """
 Takes input directory full of .laz (or.las) files and filters+classifies them to DTM laz and DTM tif.
 
+
 Usage:
-    ice-road-pipeline.py <in_dir> -s shp_fp [-e user_dem] [-d debug] [-a asp_dir] [-b buffer_meters] [-g geoid]
-                               [-r shp_fp_rfl] [-i imu_data] [-c cal_las] [-k known_rfl] [-h h2o] [-o aod]
-                               [-S smrf_scalar] [-L smrf_slope] [-T smrf_threshold] [-W smrf_window] [-D]
+    ice-road-pipeline.py <in_dir> [--shp=<shpfile>] [--dem=<demfile>]
+                       [--debug] [--geoid] [--skip-filter] [--force]
+                       [--asp-dir=<dir>] [--buffer=<m>]
+                       [--smrf-scalar=<x>] [--smrf-slope=<y>]
+                       [--smrf-threshold=<z>] [--smrf-window=<w>]
+                       [--shp-rfl=<shp>] [--imu=<csv>] [--cal-las=<las>]
+                       [--known-rfl=<val>] [--h2o=<val>] [--aod=<val>]
 
-Options:
-    -e user_dem      Path to user specifed DEM
-    -d debug         turns on debugging logging
-    -a asp_dir       Directory with ASP binary files
-    -s shp_fp        Shapefile to align with
-    -b buffer_meters Total width for the transform area
-    -g geoid         Is the reference DEM in geoid
-    -r shp_fp_rfl    (Optional) Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
-                     Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
-                     "Intensity as Reflectance" returned by RIEGL.
-    -i imu_data      (Optional) Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
-                     Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]'] 
-    -c cal_las       (Optional) Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
-                     To avoid confusion, please supply this file in a different directory from <in_dir>.
-    -k known_rfl     (Optional) Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl.
-    -h h2o           (Optional) Water Column Vapor in atmosphere in mm (float) 
-    -o aod           (Optional) Aerosol optical depth at 550 nm (float)
-    -S smrf_scalar          (Optional) Scalar parameter for SMRF
-    -L smrf_slope           (Optional) slope parameter for SMRF
-    -T smrf_threshold       (Optional) threshold parameter for SMRF
-    -W smrf_window          (Optional) window parameter for SMRF
-    -D               Disable PDAL DEM-based filtering before SMRF (bool).
+Arguments:
+    <in_dir>                  Directory containing .laz or .las files
 
+Required Arguments:
+    --shp=<shpfile>           Shapefile to align with (.shp)
+    --dem=<demfile>           Path to user specifed DEM (.tif/.tiff)
+
+Flags:
+    --debug                   Enable debug logging (default = False)
+    --geoid                   Input DEM uses geoid vertical datum (default = False)
+    --skip-filter             Skip DEM filtering after ASP alignment (default = False)
+    --force                   Force overwrite existing TIFs (uncorrected and aligned) and strip whitespace from <in_dir>
+
+Optional:
+    --asp-dir=<dir>           Directory with ASP binary files (default: ./ASP/bin)
+    --buffer=<m>              Buffer width in meters [default: 3.0]
+
+SMRF Overrides (optional):
+    --smrf-scalar=<x>         SMRF scalar parameter (float)
+    --smrf-slope=<y>          SMRF slope parameter (float)
+    --smrf-threshold=<z>      SMRF threshold parameter (float)
+    --smrf-window=<w>         SMRF window parameter (float)
+
+Grain-size reflectance (optional):
+    --shp-rfl=<shp>           Shapefile to align for reflectance calibration. If given, it is assumed you want grain size output.
+                              Additionally, if this mode is selected, the supplied files must be .LAS with extra bytes included with
+                              "Intensity as Reflectance" returned by RIEGL.
+    --imu=<csv>               Path to helicopter IMU .CSV or.TXT data used to match data with point cloud using GPS time.
+                              Column names must include ['Time[s]', 'Easting[m]', 'Northing[m]', 'Height[m]']
+    --cal-las=<las>           Path to .LAS used for calibration of the apparent reflectance for 1064nm of lidar sensor.
+                              To avoid confusion, please supply this file in a different directory from <in_dir>.
+    --known-rfl=<val>         Known intrinsic reflectance at 1064nm (float/real) for target identified in shp_fp_rfl
+    --h2o=<val>               Water Column Vapor in atmosphere in mm (float)
+    --aod=<val>               Aerosol optical depth at 550nm (float)
 """
 
 from docopt import docopt
+from schema import Schema, And, Or, Use, SchemaError
 from glob import glob
 from os.path import abspath, join, basename, isdir
 import rioxarray as rio
@@ -43,160 +60,183 @@ import os
 # local imports
 from laz2dem import las2uncorrectedDEM
 from laz_align import laz_align
-from dir_space_strip import replace_white_spaces
 from las2grain import grain_pipeline
+from utils import setup_logger, replace_white_spaces
 
-SMRF_OPTIONS = [('-S', 'scalar'), ('-L', 'slope'), ('-T', 'threshold'), ('-W', 'window')]
+SMRF_OPTIONS = [
+    ('--smrf-scalar', 'scalar'),
+    ('--smrf-slope', 'slope'),
+    ('--smrf-threshold', 'threshold'),
+    ('--smrf-window', 'window'),
+]
 
+def main():
 
-if __name__ == '__main__':
     start_time = datetime.now()
-    # get command line args
-    args = docopt(__doc__)
-    user_dem = args.get('-e')
-    if user_dem:
-        user_dem = abspath(user_dem)
-    geoid = args.get('-g')
-    if not user_dem:
-        geoid = True
-    debug = args.get('-d')
-    asp_dir = args.get('-a')
+
+    # ---- docopt parse and in_dir validation ----
+    try:
+        args = docopt(__doc__)
+    except SystemExit:
+        # If user requested --help, allow docopt to print full help text normally
+        if "--help" in sys.argv or "-h" in sys.argv:
+            sys.exit(0)
+
+        print("\nERROR: Missing input directory <in_dir>.\n")
+        print("Example:\n  ice-road-pipeline.py /tmp/data --shp=road.shp --dem=ref.tif\n")
+        sys.exit(1)
+
+    # ---- Enforce user DEM(-e) and alignment shapefile(-e) ----
+    required = ["--shp", "--dem"]
+    friendly = {
+        "--shp": "alignment shapefile (--shp=<file>)",
+        "--dem": "reference DEM (--dem=<file>)",
+    }
+
+    missing = [r for r in required if not args.get(r)]
+    if missing:
+        print(f"\nERROR: Missing required argument: {friendly[missing[0]]}\n")
+        sys.exit(1)
+
+    # ---- schema validation ----
+    schema = Schema({
+        "<in_dir>": And(os.path.exists, os.path.isdir,
+                        error="<in_dir> must be an existing directory"),
+        "--shp": And(os.path.exists, lambda p: p.lower().endswith('.shp'),
+                     error="--shp must be a .shp file"),
+        "--dem": And(os.path.exists, lambda p: p.lower().endswith(('.tif', '.tiff')),
+                     error="--dem must be a .tif/.tiff DEM"),
+
+        "--buffer": Or(None, Use(float, error="--buffer must be numeric")),
+        "--smrf-scalar": Or(None, Use(float, error="--smrf-scalar must be numeric")),
+        "--smrf-slope": Or(None, Use(float, error="--smrf-slope must be numeric")),
+        "--smrf-threshold": Or(None, Use(float, error="--smrf-threshold must be numeric")),
+        "--smrf-window": Or(None, Use(float, error="--smrf-window must be numeric")),
+
+        "--debug": bool,
+        "--geoid": bool,
+        "--skip-filter": bool,
+        "--force": bool,
+
+        "--asp-dir": Or(None, str),
+        "--shp-rfl": Or(None, str),
+        "--imu": Or(None, str),
+        "--cal-las": Or(None, str),
+        "--known-rfl": Or(None, Use(float)),
+        "--h2o": Or(None, Use(float)),
+        "--aod": Or(None, Use(float)),
+    })
+
+    try:
+        args = schema.validate(args)
+    except SchemaError as e:
+        msg = str(e)
+        if " in " in msg:              # remove verbose dict printing
+            msg = msg.split(" in ")[0]
+        
+        print("\nArgument Error:")
+        print(f"  {msg}\n")
+        sys.exit(1)
+    
+    # ---- extract args ----
+    in_dir      = abspath(args["<in_dir>"])
+    shp_fp      = abspath(args["--shp"])
+    user_dem    = abspath(args["--dem"])
+
+    debug       = args["--debug"]
+    geoid       = args["--geoid"]
+    skip_filter = args["--skip-filter"]
+    force       = args["--force"]
+    asp_dir     = args["--asp-dir"]
+
     if asp_dir:
         asp_dir = abspath(asp_dir)
-        if basename(asp_dir) != 'bin':
-            asp_dir = join(asp_dir, 'bin')
+        if basename(asp_dir) != "bin":
+            asp_dir = join(asp_dir, "bin")
     else:
-        asp_dir = abspath(join('ASP', 'bin'))
-    shp_fp = args.get('-s')
-    if shp_fp:
-        shp_fp = abspath(shp_fp)
-        if isdir(shp_fp):
-            raise Exception("Provide to .shp file to use. Not directory.")
-        elif not shp_fp.endswith('.shp'):
-            raise Exception("Provide fp to .shp file to use.")
-    else:
-        raise Exception("Provide filepath to .shp file for alignment with -s flag.")
-    
-    buffer_meters = args.get('-b')
-    if buffer_meters:
-        known_rfl = float(buffer_meters)
-    else:
-        buffer_meters = 3.0
+        asp_dir = abspath(join("ASP", "bin"))
 
-    shp_fp_rfl = args.get('-r')
+    buffer_meters  = args.get("--buffer", 3.0)
+    smrf_overrides = {key: args[flag] for flag, key in SMRF_OPTIONS if args[flag] is not None}
+
+    # grain args (todo: split grain vs IR pipeline)
+    shp_fp_rfl = args["--shp-rfl"]
+    imu_data   = args["--imu"]
+    cal_las    = args["--cal-las"]
+    known_rfl  = args["--known-rfl"]
+    h2o        = args["--h2o"]
+    aod        = args["--aod"]
     if shp_fp_rfl:
         shp_fp_rfl = abspath(shp_fp_rfl)
-        las_extra_byte_format = True
-    else:
-        las_extra_byte_format = False
+    las_extra_byte_format = bool(shp_fp_rfl)
 
-    imu_data = args.get('-i')
-    if imu_data:
-        imu_data = abspath(imu_data)
+    # ---- directory setup ----
+    ice_dir     = join(in_dir, "ice-road")
+    results_dir = join(ice_dir, "results")
+    json_dir    = join(ice_dir, "jsons")
+    log_dir     = join(ice_dir, "logs")
 
-    cal_las = args.get('-c')
-    if cal_las:
-        cal_las = abspath(cal_las)
+    for d in (ice_dir, results_dir, json_dir, log_dir):
+        os.makedirs(d, exist_ok=True)
 
-    known_rfl = args.get('-k')
-    if known_rfl:
-        known_rfl = float(known_rfl)
+    # ---- logging ----
+    log = setup_logger(log_dir, "ice-road-pipeline", debug)
+    log.info("Arguments validated. Starting IRC pipeline.")
 
-    h2o = args.get('-h')
-    if h2o:
-        h2o = float(h2o)
+    # ---- whitespace cleanup ----
+    if any(" " in p for p in glob(join(in_dir, "*"))):
+        log.warning(f"Whitespace(s) found in filenames within {in_dir}.")
+        if force:
+            replace_white_spaces(path=in_dir, log=log)
+        else:
+            log.warning("Not modifying (rerun with --force to rename).")
 
-    aod = args.get('-o')
-    if aod:
-        aod = float(aod)
-
-    smrf_overrides = {}
-    for flag, key in SMRF_OPTIONS:
-        value = args.get(flag)
-        if value is not None:
-            smrf_overrides[key] = float(value)
-
-    use_dem_filter = not args['-D']
-
-    in_dir = args.get('<in_dir>')
-    # convert to abspath
-    in_dir = abspath(in_dir)
-    
-    
-    # setup our directory structure
-    ice_dir = join(in_dir, 'ice-road')
-    os.makedirs(ice_dir, exist_ok= True)
-    results_dir = join(ice_dir, 'results')
-    os.makedirs(results_dir, exist_ok= True)
-    json_dir = join(ice_dir, 'jsons')
-    os.makedirs(json_dir, exist_ok= True)
-
-    # setup logging
-    log_dir = join(ice_dir, 'logs')
-    os.makedirs(log_dir, exist_ok= True)
-    log_prefix = 'ice-road-pipeline'
-    old_logs = glob(join(log_dir, f'{log_prefix}*.log'))
-    if old_logs:
-        # gets last run number from the old logs
-        vnum = max([int(basename(i).split('.')[0].split('-')[-1].replace('r','')) for i in sorted(old_logs)]) + 1
-    else:
-        # otherwise sets run number to 1
-        vnum = 1
-
-    logging.basicConfig(level=logging.INFO,
-    format=f"(ice-road-copters {__name__} %(levelname)s) %(message)s",
-    # saves out to log file and outputs to command line.
-    handlers=[
-        logging.FileHandler(join(log_dir, f'{log_prefix}-r{vnum}.log')),
-        logging.StreamHandler(sys.stdout)]
-    )
-    log = logging.getLogger(__name__)
-    if debug:
-        log.setLevel(logging.DEBUG)  
-
-    # check for white spaces
-    if len([i for i in glob(join(in_dir, '*')) if ' ' in i]) > 0:
-        log.warning('White spaces found in file paths. Try and remove them?')
-        replace_white_spaces(in_dir)
-        # raise Exception('File paths contains spaces. Please remove with the dir_space_strip.py script.')
-
-    # run main functions
-    log.info('Starting laz2uncorrectedDEM')
+    # ---- DEM creation ----
+    log.info("Starting laz2uncorrectedDEM...")
     log.info(f'Using in_dir: {in_dir}, user_dem: {user_dem}')
-
     outtif, outlas, canopy_laz = las2uncorrectedDEM(
-        in_dir,
-        debug,
-        log,
-        user_dem=user_dem,
+        in_dir=in_dir,
+        log=log,
+        debug=debug,
         las_extra_byte_format=las_extra_byte_format,
         smrf_overrides=smrf_overrides,
-        use_dem_filter=use_dem_filter
+        force_overwrite=force,
     )
 
+    # ---- ASP alignment ----
     log.info('Starting ASP laz align')
     log.info(f'Using in_dir: {in_dir}, shapefile: {shp_fp}, ASP dir: {asp_dir}')
+    snow_tif, canopy_tif = laz_align(
+        in_dir=in_dir,
+        align_shp=shp_fp,
+        asp_dir=asp_dir,
+        log=log,
+        input_laz=outlas,
+        canopy_laz=canopy_laz,
+        dem_is_geoid=geoid,
+        buffer_meters=buffer_meters,
+        use_dem_filter=not skip_filter,
+        user_dem=user_dem,
+        force_overwrite=force,
+    )
 
-    snow_tif, canopy_tif = laz_align(in_dir = in_dir, align_shp = shp_fp, 
-                                     asp_dir = asp_dir,log = log, input_laz = outlas, 
-                                     canopy_laz = canopy_laz, dem_is_geoid= geoid, 
-                                     buffer_meters=buffer_meters,
-                                     las_extra_byte_format=las_extra_byte_format)
-    
-    # clean up after ASP a bit
+    # cleanup up after ASP a bit
     for fp in os.listdir(ice_dir):
         if fp.endswith(".txt"):
             os.remove(join(ice_dir, fp))
-        if fp.endswith('-DEM.tif'):
-            os.rename(join(ice_dir, fp), join(ice_dir, fp.replace('-DEM','')))
-    snow_tif = snow_tif.replace('-DEM','')
-    canopy_tif = canopy_tif.replace('-DEM','')
+        if fp.endswith("-DEM.tif"):
+            os.rename(join(ice_dir, fp), join(ice_dir, fp.replace("-DEM", "")))
     
+    snow_tif   = snow_tif.replace("-DEM", "")
+    canopy_tif = canopy_tif.replace("-DEM", "")
+
+    # ---- snow depth ----
     # difference two rasters to find snow depth
     ref_dem_path = join(results_dir, 'dem.tif')
     snow_depth_path = join(ice_dir, f'{basename(in_dir)}-snowdepth.tif')
+
     snowoff = rio.open_rasterio(ref_dem_path, masked=True)
-    snowon = rio.open_rasterio(snow_tif, masked=True) 
+    snowon = rio.open_rasterio(snow_tif, masked=True)
     snowon_matched = snowon.rio.reproject_match(snowoff)
     snowdepth = snowon_matched - snowoff
 
@@ -204,25 +244,31 @@ if __name__ == '__main__':
     snowdepth.rio.to_raster(snow_depth_path)
     snowon_matched.rio.to_raster(snow_tif)
 
+    # ---- canopy height ----
     # difference two rasters to find canopy height
-    ref_dem_path = join(results_dir, 'dem.tif')
-    canopy_fp = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
-    canopy = rio.open_rasterio(canopy_tif, masked=True) 
-    matched = canopy.rio.reproject_match(snowoff)
+    canopy_fp    = join(ice_dir, f'{basename(in_dir)}-canopyheight.tif')
+    canopy       = rio.open_rasterio(canopy_tif, masked=True)
+    matched      = canopy.rio.reproject_match(snowoff)
     canopyheight = matched - snowoff
 
     # mask snow depth from vegetation (null=0)
     canopyheight = canopyheight.where((canopyheight > snowdepth + 0.1) | (snowdepth.isnull()), other=0)
     canopyheight.rio.to_raster(canopy_fp)
 
-    # estimate Optical Grain Size from reflectance using AART at 1064 nm.
+    # ---- grain pipeline ----
     if shp_fp_rfl:
-        grain_pipeline(cal_las, shp_fp_rfl,
-                       imu_data, known_rfl,
-                       results_dir, ice_dir, 
-                       in_dir, snow_tif,
-                       snow_depth_path,
-                       canopy_fp, h2o, aod)
-
+        log.info("Running grain size pipeline...")
+        grain_pipeline(
+            cal_las, shp_fp_rfl,
+            imu_data, known_rfl,
+            results_dir, ice_dir,
+            in_dir, snow_tif,
+            snow_depth_path,
+            canopy_fp, h2o, aod
+        )
+    
     end_time = datetime.now()
-    log.info(f"Completed! Run Time: {end_time - start_time}")
+    log.info(f"Completed! Pipeline runtime: {end_time - start_time}")
+
+if __name__ == '__main__':
+    main()
